@@ -1,0 +1,79 @@
+:root,
+[data-theme="light"] {
+  --awn-bg: #F7F7F4;
+  --awn-surface: #FFFFFF;
+  --awn-surface-alt: #F2F3F1;
+  --awn-primary: #145B5F;
+  --awn-primary-strong: #0D4145;
+  --awn-primary-soft: #E8F1F0;
+  --awn-on-primary: #FFFFFF;
+  --awn-gold: #B89A5A;
+  --awn-gold-soft: #F4EEDF;
+  --awn-text-primary: #1F2933;
+  --awn-text-secondary: #667085;
+  --awn-text-muted: #98A2B3;
+  --awn-border: #E4E7E5;
+  --awn-border-strong: #CBD2CF;
+
+  --awn-success: #16794B;
+  --awn-success-soft: #E7F6EE;
+  --awn-success-border: #B6E3CB;
+
+  --awn-warning: #B56A14;
+  --awn-warning-soft: #FDF3E6;
+  --awn-warning-border: #F5D5AD;
+
+  --awn-error: #C0352B;
+  --awn-error-soft: #FCECEB;
+  --awn-error-border: #F3BDBC;
+
+  --awn-info: #1D5E8A;
+  --awn-info-soft: #E9F2F9;
+  --awn-info-border: #B8D5EA;
+
+  --awn-sidebar-bg: #0D4145;
+  --awn-sidebar-surface: #145B5F;
+  --awn-sidebar-text: #E8F1F0;
+  --awn-sidebar-muted: #9DC0BE;
+  --awn-sidebar-border: #1C686C;
+}
+
+.dark,
+[data-theme="dark"] {
+  --awn-bg: #101817;
+  --awn-surface: #16201F;
+  --awn-surface-alt: #1D2928;
+  --awn-primary: #4F8F8C;
+  --awn-primary-strong: #145B5F;
+  --awn-primary-soft: #203B3A;
+  --awn-on-primary: #FFFFFF;
+  --awn-gold: #C8AA6E;
+  --awn-gold-soft: #332D21;
+  --awn-text-primary: #F2F4F3;
+  --awn-text-secondary: #B8C1BF;
+  --awn-text-muted: #879390;
+  --awn-border: #2B3836;
+  --awn-border-strong: #3B4C49;
+
+  --awn-success: #45B880;
+  --awn-success-soft: #183328;
+  --awn-success-border: #255640;
+
+  --awn-warning: #E39B42;
+  --awn-warning-soft: #33281A;
+  --awn-warning-border: #594326;
+
+  --awn-error: #E5645A;
+  --awn-error-soft: #361E1D;
+  --awn-error-border: #5E302E;
+
+  --awn-info: #5AA3D6;
+  --awn-info-soft: #1B2D3B;
+  --awn-info-border: #2C4B63;
+
+  --awn-sidebar-bg: #0C1312;
+  --awn-sidebar-surface: #16201F;
+  --awn-sidebar-text: #F2F4F3;
+  --awn-sidebar-muted: #879390;
+  --awn-sidebar-border: #2B3836;
+}

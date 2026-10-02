@@ -1,0 +1,8 @@
+{
+  "name": "AWN Assets Module",
+  "description": "A professional, cohesive enterprise asset management interface focused on clarity, structured workflows, and high information density.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,48 @@
+@import "tailwindcss";
+@import "./styles/tokens.css";
+
+@theme {
+  --color-awn-bg: var(--awn-bg);
+  --color-awn-surface: var(--awn-surface);
+  --color-awn-surface-alt: var(--awn-surface-alt);
+  --color-awn-primary: var(--awn-primary);
+  --color-awn-primary-strong: var(--awn-primary-strong);
+  --color-awn-primary-soft: var(--awn-primary-soft);
+  --color-awn-on-primary: var(--awn-on-primary);
+  --color-awn-gold: var(--awn-gold);
+  --color-awn-gold-soft: var(--awn-gold-soft);
+  --color-awn-text-primary: var(--awn-text-primary);
+  --color-awn-text-secondary: var(--awn-text-secondary);
+  --color-awn-text-muted: var(--awn-text-muted);
+  --color-awn-border: var(--awn-border);
+  --color-awn-border-strong: var(--awn-border-strong);
+
+  --color-awn-success: var(--awn-success);
+  --color-awn-success-soft: var(--awn-success-soft);
+  --color-awn-success-border: var(--awn-success-border);
+
+  --color-awn-warning: var(--awn-warning);
+  --color-awn-warning-soft: var(--awn-warning-soft);
+  --color-awn-warning-border: var(--awn-warning-border);
+
+  --color-awn-error: var(--awn-error);
+  --color-awn-error-soft: var(--awn-error-soft);
+  --color-awn-error-border: var(--awn-error-border);
+
+  --color-awn-info: var(--awn-info);
+  --color-awn-info-soft: var(--awn-info-soft);
+  --color-awn-info-border: var(--awn-info-border);
+
+  --color-awn-sidebar-bg: var(--awn-sidebar-bg);
+  --color-awn-sidebar-surface: var(--awn-sidebar-surface);
+  --color-awn-sidebar-text: var(--awn-sidebar-text);
+  --color-awn-sidebar-muted: var(--awn-sidebar-muted);
+  --color-awn-sidebar-border: var(--awn-sidebar-border);
+}
+
+body {
+  background-color: var(--awn-bg);
+  color: var(--awn-text-primary);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
