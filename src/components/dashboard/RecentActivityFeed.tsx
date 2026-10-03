@@ -29,7 +29,7 @@ export function RecentActivityFeed({
     const iconClass = 'w-3.5 h-3.5';
     switch (type) {
       case 'ASSET_ADDED':
-        return <PlusCircle className={`${iconClass} text-awn-primary`} />;
+        return <PlusCircle className={`${iconClass} text-[#192A22] dark:text-[#BFAB93]`} />;
       case 'ASSET_ASSIGNED':
       case 'ASSET_REASSIGNED':
         return <UserCheck className={`${iconClass} text-sky-600 dark:text-sky-400`} />;
@@ -74,7 +74,7 @@ export function RecentActivityFeed({
         <button
           type="button"
           onClick={() => onNavigate('/assets/audit-trails')}
-          className="inline-flex items-center gap-1 text-xs font-medium text-awn-primary hover:text-awn-primary-strong transition-colors cursor-pointer whitespace-nowrap"
+          className="inline-flex items-center gap-1 text-xs font-medium text-[#192A22] dark:text-[#BFAB93] hover:text-[#6A7358] dark:hover:text-[#BEB9A3] transition-colors cursor-pointer whitespace-nowrap"
         >
           <span>{isAr ? 'عرض سجل التدقيق الكامل' : 'Full Audit Trail'}</span>
           <ArrowRight className={`w-3.5 h-3.5 ${isAr ? 'rotate-180' : ''}`} />
@@ -130,7 +130,7 @@ export function RecentActivityFeed({
                   <button
                     type="button"
                     onClick={() => onNavigate(item.linkPath!)}
-                    className="inline-flex items-center gap-1 text-[11px] font-medium text-awn-primary hover:underline cursor-pointer"
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-[#192A22] dark:text-[#BFAB93] hover:underline cursor-pointer"
                   >
                     <span>{isAr ? 'فحص السجل' : 'Inspect Record'}</span>
                     <ArrowUpRight className="w-3 h-3" />

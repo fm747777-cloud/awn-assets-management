@@ -28,7 +28,7 @@ export function AssetsByLocationBars({
           </p>
         </div>
         <span className="inline-flex items-center gap-1 text-xs font-mono text-awn-text-muted tabular-nums">
-          <MapPin className="w-3.5 h-3.5 text-awn-gold" />
+          <MapPin className="w-3.5 h-3.5 text-[#6A7358] dark:text-[#BFAB93]" />
           <span>
             {locations.length} {isAr ? 'مراكز' : 'Hubs'}
           </span>

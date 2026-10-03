@@ -23,6 +23,7 @@ import { ConfirmDialog, Modal } from '../components/ui/Modal.tsx';
 import { FormSection } from '../components/ui/FormSection.tsx';
 import { EmptyState } from '../components/ui/EmptyState.tsx';
 import { TableSkeleton } from '../components/ui/LoadingState.tsx';
+import { useLanguage } from '../hooks/useLanguage.tsx';
 import type {
   AssetType,
   AssetTypeFormData,
@@ -39,6 +40,7 @@ const LANGUAGE_OPTIONS: SelectOption[] = [
 
 export default function AssetTypesPage() {
   const { showToast } = useToast();
+  const { isRtl, formatNumber } = useLanguage();
 
   // Table & Query State
   const [loading, setLoading] = useState(true);
@@ -311,27 +313,35 @@ export default function AssetTypesPage() {
     <div className="space-y-5">
       {/* Page Header with exact Title, Description, and Actions ("Export CSV", "New Type") */}
       <PageHeader
-        title="Asset Types"
-        description="Classify your assets based on type, such as Electronics, Vehicles, Machinery, or Office Equipment. This helps in better asset tracking, maintenance, and reporting."
+        title={isRtl ? 'أنواع الأصول' : 'Asset Types'}
+        description={
+          isRtl
+            ? 'تصنيف الأصول بحسب النوع الفني والمواصفات (مثل الأجهزة، المركبات، الآلات، والأثاث المكتبي) لتوحيد تتبع الصيانة والتقارير الرقابية.'
+            : 'Classify your assets based on type, such as Electronics, Vehicles, Machinery, or Office Equipment. This helps in better asset tracking, maintenance, and reporting.'
+        }
         contextMeta={
           <div className="flex flex-wrap items-center gap-2 text-xs text-awn-text-secondary tabular-nums">
             <span className="inline-flex items-center gap-1.5 font-semibold text-awn-text-primary">
               <Layers className="w-3.5 h-3.5 text-awn-primary" aria-hidden="true" />
-              <span>{typesData.summaryTotalLabel}</span>
+              <span>
+                {isRtl
+                  ? `${formatNumber(typesData.totalRecordsCount)} أنواع أصول`
+                  : typesData.summaryTotalLabel}
+              </span>
             </span>
             <span aria-hidden="true">·</span>
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {typesData.activeCount}
+                {formatNumber(typesData.activeCount)}
               </strong>{' '}
-              Active
+              {isRtl ? 'نشط' : 'Active'}
             </span>
             <span aria-hidden="true">·</span>
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {typesData.inactiveCount}
+                {formatNumber(typesData.inactiveCount)}
               </strong>{' '}
-              Inactive
+              {isRtl ? 'غير نشط' : 'Inactive'}
             </span>
           </div>
         }
@@ -342,7 +352,7 @@ export default function AssetTypesPage() {
             leftIcon={<Download className="w-4 h-4" />}
             onClick={handleExportCsv}
           >
-            Export CSV
+            {isRtl ? 'تصدير CSV' : 'Export CSV'}
           </Button>
         }
         primaryAction={
@@ -352,7 +362,7 @@ export default function AssetTypesPage() {
             leftIcon={<Plus className="w-4 h-4" />}
             onClick={handleOpenCreateModal}
           >
-            New Type
+            {isRtl ? 'إضافة نوع' : 'New Type'}
           </Button>
         }
       />
@@ -363,18 +373,24 @@ export default function AssetTypesPage() {
         <div className="p-4 border-b border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="Search by Type ID, Type Name, Category, Description..."
+              placeholder={
+                isRtl
+                  ? 'البحث برمز النوع، الاسم، التصنيف، الوصف...'
+                  : 'Search by Type ID, Type Name, Category, Description...'
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onClear={() => setSearchQuery('')}
               leftIcon={<Search className="w-4 h-4" />}
-              aria-label="Search asset types"
+              aria-label={isRtl ? 'بحث في أنواع الأصول' : 'Search asset types'}
             />
           </div>
 
           <div className="flex items-center gap-2 text-xs text-awn-text-secondary">
             <span className="px-2.5 py-1 rounded-md bg-awn-surface-alt border border-awn-border font-semibold text-awn-text-primary tabular-nums">
-              {typesData.summaryTotalLabel}
+              {isRtl
+                ? `${formatNumber(typesData.totalRecordsCount)} نوع أصل`
+                : typesData.summaryTotalLabel}
             </span>
           </div>
         </div>
@@ -384,13 +400,25 @@ export default function AssetTypesPage() {
           <TableSkeleton rows={5} columns={6} />
         ) : typesData.items.length === 0 ? (
           <EmptyState
-            title="No Asset Types Found"
+            title={isRtl ? 'لم يتم العثور على أنواع أصول' : 'No Asset Types Found'}
             description={
               searchQuery
-                ? `No asset types matched "${searchQuery}". Try clearing your search query.`
+                ? isRtl
+                  ? `لا توجد أنواع أصول تطابق "${searchQuery}". جرب إفراغ خانة البحث.`
+                  : `No asset types matched "${searchQuery}". Try clearing your search query.`
+                : isRtl
+                ? 'لا توجد أنواع أصول مسجلة حالياً. انقر على "إضافة نوع" لإنشاء أول نوع أصل.'
                 : 'No asset types are currently registered. Click "New Type" to create your first type.'
             }
-            primaryActionLabel={searchQuery ? 'Clear Search' : 'New Type'}
+            primaryActionLabel={
+              searchQuery
+                ? isRtl
+                  ? 'مسح البحث'
+                  : 'Clear Search'
+                : isRtl
+                ? 'إضافة نوع'
+                : 'New Type'
+            }
             onPrimaryAction={
               searchQuery ? () => setSearchQuery('') : handleOpenCreateModal
             }
@@ -398,17 +426,27 @@ export default function AssetTypesPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left rtl:text-right border-collapse">
                 <thead>
                   <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                    <th className="py-3 px-4 whitespace-nowrap">Type ID</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Type Name</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Category</th>
-                    <th className="py-3 px-4">Description</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Created Date</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Status</th>
-                    <th className="py-3 px-4 whitespace-nowrap text-right">
-                      Actions
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'رمز النوع' : 'Type ID'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'اسم النوع' : 'Type Name'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'التصنيف' : 'Category'}
+                    </th>
+                    <th className="py-3 px-4">{isRtl ? 'الوصف' : 'Description'}</th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'تاريخ الإنشاء' : 'Created Date'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'الحالة' : 'Status'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
+                      {isRtl ? 'الإجراءات' : 'Actions'}
                     </th>
                   </tr>
                 </thead>
@@ -520,18 +558,34 @@ export default function AssetTypesPage() {
             {/* Pagination Footer */}
             <div className="px-4 py-3 border-t border-awn-border bg-awn-surface flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-awn-text-secondary">
               <div className="tabular-nums">
-                Showing{' '}
-                <strong className="font-semibold text-awn-text-primary">
-                  {typesData.items.length}
-                </strong>{' '}
-                of{' '}
-                <strong className="font-semibold text-awn-text-primary">
-                  {typesData.pagination.totalItems}
-                </strong>{' '}
-                displayed records ·{' '}
-                <strong className="font-semibold text-awn-text-primary">
-                  {typesData.summaryTotalLabel}
-                </strong>
+                {isRtl ? (
+                  <>
+                    عرض{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {formatNumber(typesData.items.length)}
+                    </strong>{' '}
+                    من أصل{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {formatNumber(typesData.pagination.totalItems)}
+                    </strong>{' '}
+                    سجل
+                  </>
+                ) : (
+                  <>
+                    Showing{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {typesData.items.length}
+                    </strong>{' '}
+                    of{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {typesData.pagination.totalItems}
+                    </strong>{' '}
+                    displayed records ·{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {typesData.summaryTotalLabel}
+                    </strong>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -540,21 +594,23 @@ export default function AssetTypesPage() {
                   size="sm"
                   disabled={currentPage <= 1}
                   onClick={() => fetchTypes(currentPage - 1)}
-                  leftIcon={<ChevronLeft className="w-3.5 h-3.5" />}
+                  leftIcon={isRtl ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
                 >
-                  Previous
+                  {isRtl ? 'السابق' : 'Previous'}
                 </Button>
                 <span className="px-2.5 py-1 font-mono text-xs text-awn-text-primary tabular-nums">
-                  Page {currentPage} of {typesData.pagination.totalPages}
+                  {isRtl
+                    ? `صفحة ${formatNumber(currentPage)} من ${formatNumber(typesData.pagination.totalPages)}`
+                    : `Page ${currentPage} of ${typesData.pagination.totalPages}`}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={currentPage >= typesData.pagination.totalPages}
                   onClick={() => fetchTypes(currentPage + 1)}
-                  rightIcon={<ChevronRight className="w-3.5 h-3.5" />}
+                  rightIcon={isRtl ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                 >
-                  Next
+                  {isRtl ? 'التالي' : 'Next'}
                 </Button>
               </div>
             </div>

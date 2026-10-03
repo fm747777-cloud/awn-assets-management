@@ -1,0 +1,15 @@
+export const notificationsEn = {
+  title: 'Notifications',
+  unreadCount: '{count} unread',
+  allCaughtUp: 'All caught up',
+  markAllRead: 'Mark all read',
+  allTab: 'All',
+  unreadTab: 'Unread',
+  clearAll: 'Clear all',
+  noNotifications: 'No notifications',
+  noUnreadNotifications: 'No unread notifications',
+  noUnreadDesc: 'You are all caught up with your enterprise asset alerts.',
+  noNotificationsDesc: 'All notifications have been cleared.',
+  viewRequestsQueue: 'View Requests Queue',
+  auditLog: 'Audit Log',
+};

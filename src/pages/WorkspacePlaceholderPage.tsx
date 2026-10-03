@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
 import { assetModuleService } from '../services/assetModuleService.ts';
 import { useToast } from '../hooks/useToast.tsx';
+import { useLanguage } from '../hooks/useLanguage.tsx';
 import { PageHeader } from '../components/ui/PageHeader.tsx';
 import { Button } from '../components/ui/Button.tsx';
 import { DataTable } from '../components/ui/DataTable.tsx';
@@ -13,15 +14,15 @@ import type { BreadcrumbItem, ResolvedRoute } from '../types/navigation.ts';
 
 const SUB_NAVIGATION_GROUPS: Record<'assets' | 'master', BreadcrumbItem[]> = {
   assets: [
-    { label: 'Assets Workspace', path: '/assets/registry' },
-    { label: 'Compliance Assets', path: '/assets/compliance' },
-    { label: 'Non-Compliance Assets', path: '/assets/non-compliance' },
+    { label: 'Assets Workspace', arabicLabel: 'سجل الأصول', path: '/assets/registry' },
+    { label: 'Compliance Assets', arabicLabel: 'أصول الامتثال', path: '/assets/compliance' },
+    { label: 'Non-Compliance Assets', arabicLabel: 'الأصول القياسية', path: '/assets/non-compliance' },
   ],
   master: [
-    { label: 'Asset Categories', path: '/assets/master/categories' },
-    { label: 'Asset Types', path: '/assets/master/types' },
-    { label: 'Asset Tags', path: '/assets/master/tags' },
-    { label: 'Asset Status', path: '/assets/master/status' },
+    { label: 'Asset Categories', arabicLabel: 'تصنيفات الأصول', path: '/assets/master/categories' },
+    { label: 'Asset Types', arabicLabel: 'أنواع الأصول', path: '/assets/master/types' },
+    { label: 'Asset Tags', arabicLabel: 'وسوم الأصول', path: '/assets/master/tags' },
+    { label: 'Asset Status', arabicLabel: 'حالات الأصول', path: '/assets/master/status' },
   ],
 };
 
@@ -35,6 +36,7 @@ export default function WorkspacePlaceholderPage({
   onNavigate,
 }: WorkspacePlaceholderPageProps) {
   const { showToast } = useToast();
+  const { isRtl } = useLanguage();
 
   const [workspaceData, setWorkspaceData] = useState<WorkspaceDataResponse>({
     workspaceId: 'dashboard',
@@ -87,22 +89,23 @@ export default function WorkspacePlaceholderPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title={currentRoute?.label || 'Workspace'}
-        description={currentRoute?.description}
+        title={isRtl ? currentRoute?.arabicLabel || currentRoute?.label || 'مساحة العمل' : currentRoute?.label || 'Workspace'}
+        description={isRtl ? currentRoute?.arabicDescription || currentRoute?.description : currentRoute?.description}
         contextMeta={
           <span>
-            {currentRoute?.phaseNote ||
-              'Workspace entry point prepared for upcoming module phase.'}
+            {isRtl
+              ? 'نقطة دخول مجهزة لمنظومة الأصول. سيتم ربط المسارات التشغيلية الكاملة لهذا القسم في المرحلة القادمة.'
+              : currentRoute?.phaseNote || 'Workspace entry point prepared for upcoming module phase.'}
           </span>
         }
         secondaryActions={
           <Button
             variant="outline"
             size="md"
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={isRtl ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
             onClick={() => onNavigate('/assets/registry')}
           >
-            Back to Assets Workspace
+            {isRtl ? 'العودة إلى سجل الأصول' : 'Back to Assets Workspace'}
           </Button>
         }
       />
@@ -123,13 +126,13 @@ export default function WorkspacePlaceholderPage({
                       : 'text-awn-text-secondary hover:text-awn-text-primary hover:bg-awn-surface-alt'
                   }`}
                 >
-                  {tab.label}
+                  {isRtl ? tab.arabicLabel || tab.label : tab.label}
                 </button>
               );
             })}
           </div>
           <span className="px-2 text-xs text-awn-text-muted hidden sm:inline">
-            Entry Point Navigation
+            {isRtl ? 'التنقل المباشر بين الأقسام' : 'Entry Point Navigation'}
           </span>
         </div>
       )}
@@ -166,8 +169,8 @@ export default function WorkspacePlaceholderPage({
       )}
 
       <DataTable
-        title={`${currentRoute?.label} Preview`}
-        subtitle="Prepared navigation entry point. Full business workflows for this sub-module will connect in the upcoming phase."
+        title={isRtl ? `${currentRoute?.arabicLabel || currentRoute?.label} (معاينة السجلات)` : `${currentRoute?.label} Preview`}
+        subtitle={isRtl ? 'نقطة دخول مجهزة لمنظومة الأصول. سيتم ربط المسارات التشغيلية الكاملة لهذا القسم في المرحلة القادمة.' : 'Prepared navigation entry point. Full business workflows for this sub-module will connect in the upcoming phase.'}
         items={workspaceData.items}
         loading={loading}
         searchQuery={searchQuery}

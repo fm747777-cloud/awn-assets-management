@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  ArrowLeft,
   ArrowRight,
   Ban,
   ChevronLeft,
@@ -27,6 +28,7 @@ import { ConfirmDialog, Modal } from '../components/ui/Modal.tsx';
 import { FormSection } from '../components/ui/FormSection.tsx';
 import { EmptyState } from '../components/ui/EmptyState.tsx';
 import { TableSkeleton } from '../components/ui/LoadingState.tsx';
+import { useLanguage } from '../hooks/useLanguage.tsx';
 import type {
   Asset,
   AssetClassification,
@@ -59,8 +61,24 @@ export interface AssetsWorkspacePageProps {
 
 export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageProps) {
   const { showToast } = useToast();
+  const { isRtl, formatNumber } = useLanguage();
   const selectOptions = assetModuleService.getSelectOptions();
   const employees = assetModuleService.getEmployeeDirectory();
+
+  const classificationTabs: TableFilterTab<'ALL' | AssetClassification>[] = [
+    { id: 'ALL', label: isRtl ? 'كافة الأصول' : 'All Assets' },
+    { id: 'Compliance', label: isRtl ? 'أصول الامتثال' : 'Compliance' },
+    { id: 'Non-Compliance', label: isRtl ? 'الأصول القياسية' : 'Non-Compliance' },
+  ];
+
+  const statusTabs: TableFilterTab[] = [
+    { id: 'ALL', label: isRtl ? 'كافة الحالات' : 'All Statuses' },
+    { id: 'Assigned', label: isRtl ? 'مسندة بالعهدة' : 'Assigned' },
+    { id: 'Available', label: isRtl ? 'متاحة بالمستودع' : 'Available' },
+    { id: 'Compliance Due', label: isRtl ? 'استحقاق امتثال' : 'Compliance Due' },
+    { id: 'In Maintenance', label: isRtl ? 'تحت الصيانة' : 'In Maintenance' },
+    { id: 'Retired', label: isRtl ? 'مستبعدة' : 'Retired' },
+  ];
 
   // Workspace Table State
   const [assetsData, setAssetsData] = useState<AssetsQueryResponse>({
@@ -375,43 +393,47 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
     <div className="space-y-5">
       {/* Page Header with exact Title, Description, and Required Actions */}
       <PageHeader
-        title="Assets"
-        description="Track and manage company assets like devices, licenses, and equipment. Assign assets to employees, monitor status, and reduce loss or misplacement."
+        title={isRtl ? 'سجل الأصول' : 'Assets'}
+        description={
+          isRtl
+            ? 'حصر ومتابعة الأصول المؤسسية من أجهزة وتراخيص ومعدات، وتعيين العهد للموظفين، وتتبع الحالة التشغيلية ومراقبة الالتزام النظامي.'
+            : 'Track and manage company assets like devices, licenses, and equipment. Assign assets to employees, monitor status, and reduce loss or misplacement.'
+        }
         contextMeta={
           <div className="flex flex-wrap items-center gap-2 text-xs text-awn-text-secondary tabular-nums">
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {assetsData.summaryCounts.total}
+                {formatNumber(assetsData.summaryCounts.total)}
               </strong>{' '}
-              Total Assets
+              {isRtl ? 'إجمالي الأصول' : 'Total Assets'}
             </span>
             <span aria-hidden="true">·</span>
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {assetsData.summaryCounts.assigned}
+                {formatNumber(assetsData.summaryCounts.assigned)}
               </strong>{' '}
-              Assigned
+              {isRtl ? 'مسندة بالعهدة' : 'Assigned'}
             </span>
             <span aria-hidden="true">·</span>
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {assetsData.summaryCounts.available}
+                {formatNumber(assetsData.summaryCounts.available)}
               </strong>{' '}
-              Available
+              {isRtl ? 'بالمستودع' : 'Available'}
             </span>
             <span aria-hidden="true">·</span>
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {assetsData.summaryCounts.compliance}
+                {formatNumber(assetsData.summaryCounts.compliance)}
               </strong>{' '}
-              Compliance
+              {isRtl ? 'أصول الامتثال' : 'Compliance'}
             </span>
             <span aria-hidden="true">·</span>
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {assetsData.summaryCounts.nonCompliance}
+                {formatNumber(assetsData.summaryCounts.nonCompliance)}
               </strong>{' '}
-              Non-Compliance
+              {isRtl ? 'أصول قياسية' : 'Non-Compliance'}
             </span>
           </div>
         }
@@ -423,7 +445,7 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
               leftIcon={<ShieldCheck className="w-4 h-4 text-awn-primary" />}
               onClick={() => onNavigate('/assets/compliance')}
             >
-              Compliance
+              {isRtl ? 'أصول الامتثال' : 'Compliance'}
             </Button>
             <Button
               variant="outline"
@@ -431,7 +453,7 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
               leftIcon={<Package className="w-4 h-4 text-awn-text-secondary" />}
               onClick={() => onNavigate('/assets/non-compliance')}
             >
-              Non-Compliance
+              {isRtl ? 'الأصول القياسية' : 'Non-Compliance'}
             </Button>
             <Button
               variant="outline"
@@ -439,7 +461,7 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
               leftIcon={<Download className="w-4 h-4" />}
               onClick={handleExportCsv}
             >
-              Export CSV
+              {isRtl ? 'تصدير CSV' : 'Export CSV'}
             </Button>
           </>
         }
@@ -450,7 +472,7 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
             leftIcon={<Plus className="w-4 h-4" />}
             onClick={() => setNewAssetModalOpen(true)}
           >
-            New Asset
+            {isRtl ? 'إضافة أصل' : 'New Asset'}
           </Button>
         }
       />
@@ -464,7 +486,11 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
             <div className="flex flex-1 flex-wrap items-center gap-2.5">
               <div className="w-full sm:w-80">
                 <Input
-                  placeholder="Search by asset ID, name, serial, employee, location..."
+                  placeholder={
+                    isRtl
+                      ? 'البحث برمز الأصل، الاسم، الرقم التسلسلي، الموظف...'
+                      : 'Search by asset ID, name, serial, employee, location...'
+                  }
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
@@ -475,14 +501,14 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
                     setCurrentPage(1);
                   }}
                   leftIcon={<Search className="w-4 h-4" />}
-                  aria-label="Search assets"
+                  aria-label={isRtl ? 'بحث في الأصول' : 'Search assets'}
                 />
               </div>
 
               {/* Category Select Filter */}
               <div className="w-full sm:w-44">
                 <Select
-                  aria-label="Filter by asset category"
+                  aria-label={isRtl ? 'تصفية حسب التصنيف' : 'Filter by asset category'}
                   placeholder=""
                   value={categoryFilter}
                   onChange={(e) => {
@@ -490,17 +516,17 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
                     setCurrentPage(1);
                   }}
                   options={[
-                    { value: 'ALL', label: 'All Categories' },
-                    { value: 'Devices', label: 'Devices' },
-                    { value: 'Licenses', label: 'Licenses' },
-                    { value: 'Equipment', label: 'Equipment' },
+                    { value: 'ALL', label: isRtl ? 'كافة التصنيفات' : 'All Categories' },
+                    { value: 'Devices', label: isRtl ? 'الأجهزة والعتاد' : 'Devices' },
+                    { value: 'Licenses', label: isRtl ? 'التراخيص والبرمجيات' : 'Licenses' },
+                    { value: 'Equipment', label: isRtl ? 'الآلات والمعدات' : 'Equipment' },
                   ]}
                 />
               </div>
 
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={handleResetFilters}>
-                  Clear Filters
+                  {isRtl ? 'إعادة ضبط التصفية' : 'Clear Filters'}
                 </Button>
               )}
             </div>
@@ -509,10 +535,10 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
             <div className="flex flex-wrap items-center gap-2">
               <div
                 role="group"
-                aria-label="Filter by asset classification"
+                aria-label={isRtl ? 'تصفية الأصول حسب نوع الرقابة' : 'Filter by asset classification'}
                 className="inline-flex items-center p-0.5 rounded-md bg-awn-surface-alt border border-awn-border"
               >
-                {CLASSIFICATION_TABS.map((tab) => {
+                {classificationTabs.map((tab) => {
                   const active = classificationFilter === tab.id;
                   return (
                     <button
@@ -543,14 +569,16 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
                   handleResetFilters();
                   await fetchAssets(1);
                   showToast({
-                    title: 'Demo data restored',
-                    description: 'Assets registry reset to initial state.',
+                    title: isRtl ? 'تم استرجاع البيانات التجريبية' : 'Demo data restored',
+                    description: isRtl
+                      ? 'تمت إعادة ضبط سجل الأصول إلى حالته الافتراضية.'
+                      : 'Assets registry reset to initial state.',
                     variant: 'info',
                   });
                 }}
-                title="Reset demo state"
+                title={isRtl ? 'إعادة تعيين الحالة' : 'Reset demo state'}
               >
-                Reset
+                {isRtl ? 'إعادة ضبط' : 'Reset'}
               </Button>
             </div>
           </div>
@@ -559,10 +587,10 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
             <div
               role="group"
-              aria-label="Filter by asset status"
+              aria-label={isRtl ? 'تصفية الأصول حسب الحالة التشغيلية' : 'Filter by asset status'}
               className="inline-flex flex-wrap items-center gap-1 p-1 rounded-md bg-awn-surface-alt border border-awn-border"
             >
-              {STATUS_TABS.map((tab) => {
+              {statusTabs.map((tab) => {
                 const active = statusFilter === tab.id;
                 return (
                   <button
@@ -585,15 +613,31 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
             </div>
 
             <div className="text-xs text-awn-text-muted tabular-nums">
-              Showing{' '}
-              <span className="font-semibold text-awn-text-primary">
-                {assetsData.items.length}
-              </span>{' '}
-              of{' '}
-              <span className="font-semibold text-awn-text-primary">
-                {assetsData.pagination.totalItems}
-              </span>{' '}
-              assets
+              {isRtl ? (
+                <>
+                  عرض{' '}
+                  <span className="font-semibold text-awn-text-primary">
+                    {formatNumber(assetsData.items.length)}
+                  </span>{' '}
+                  من أصل{' '}
+                  <span className="font-semibold text-awn-text-primary">
+                    {formatNumber(assetsData.pagination.totalItems)}
+                  </span>{' '}
+                  أصل
+                </>
+              ) : (
+                <>
+                  Showing{' '}
+                  <span className="font-semibold text-awn-text-primary">
+                    {assetsData.items.length}
+                  </span>{' '}
+                  of{' '}
+                  <span className="font-semibold text-awn-text-primary">
+                    {assetsData.pagination.totalItems}
+                  </span>{' '}
+                  assets
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -603,30 +647,48 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
           <TableSkeleton rows={6} columns={6} />
         ) : assetsData.items.length === 0 ? (
           <EmptyState
-            title="No matching assets found"
+            title={isRtl ? 'لم يتم العثور على أصول مطابقة' : 'No matching assets found'}
             description={
               hasActiveFilters
-                ? 'No company assets match your current search query or selected filters.'
+                ? isRtl
+                  ? 'لا توجد أصول تطابق معايير البحث أو خيارات التصفية المحددة حالياً.'
+                  : 'No company assets match your current search query or selected filters.'
+                : isRtl
+                ? 'لا توجد أصول مسجلة حالياً في مساحة العمل.'
                 : 'No assets are currently registered in the workspace.'
             }
-            secondaryActionLabel={hasActiveFilters ? 'Reset All Filters' : null}
+            secondaryActionLabel={
+              hasActiveFilters ? (isRtl ? 'إعادة ضبط التصفية' : 'Reset All Filters') : null
+            }
             onSecondaryAction={hasActiveFilters ? handleResetFilters : null}
-            primaryActionLabel="New Asset"
+            primaryActionLabel={isRtl ? 'إضافة أصل' : 'New Asset'}
             onPrimaryAction={() => setNewAssetModalOpen(true)}
           />
         ) : (
           <>
             {/* Desktop High-Density Enterprise Table */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left rtl:text-right border-collapse">
                 <thead>
                   <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                    <th className="py-3 px-4 whitespace-nowrap">Asset ID</th>
-                    <th className="py-3 px-4">Asset & Serial / License</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Category & Type</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Status</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Assigned To & Location</th>
-                    <th className="py-3 px-4 whitespace-nowrap text-right">Actions</th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'رمز الأصل' : 'Asset ID'}
+                    </th>
+                    <th className="py-3 px-4">
+                      {isRtl ? 'الأصل والرقم التسلسلي' : 'Asset & Serial / License'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'التصنيف والنوع' : 'Category & Type'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'حالة الأصل' : 'Status'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'المسند إليه والموقع' : 'Assigned To & Location'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
+                      {isRtl ? 'الإجراءات' : 'Actions'}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-awn-border text-sm">
@@ -694,7 +756,7 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
                           ) : (
                             <div>
                               <div className="text-xs font-medium text-awn-text-muted">
-                                Unassigned
+                                {isRtl ? 'غير مسند (بالمستودع)' : 'Unassigned'}
                               </div>
                               <div className="text-xs text-awn-text-secondary mt-0.5">
                                 {asset.location}
@@ -704,28 +766,28 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
                         </td>
 
                         {/* Discoverable Row Actions */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right">
+                        <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right rtl:text-left">
                           <div className="inline-flex items-center justify-end gap-1">
                             <button
                               type="button"
                               onClick={() => handleOpenView(asset)}
-                              title="View asset details"
-                              aria-label={`View ${asset.name}`}
+                              title={isRtl ? 'عرض تفاصيل الأصل' : 'View asset details'}
+                              aria-label={isRtl ? `عرض ${asset.name}` : `View ${asset.name}`}
                               className="px-2 py-1 rounded text-xs font-medium text-awn-text-secondary hover:text-awn-primary hover:bg-awn-surface border border-transparent hover:border-awn-border inline-flex items-center gap-1 cursor-pointer"
                             >
                               <Eye className="w-3.5 h-3.5" aria-hidden="true" />
-                              <span>View</span>
+                              <span>{isRtl ? 'عرض' : 'View'}</span>
                             </button>
 
                             <button
                               type="button"
                               onClick={() => handleOpenEdit(asset)}
-                              title="Edit asset"
-                              aria-label={`Edit ${asset.name}`}
+                              title={isRtl ? 'تعديل بيانات الأصل' : 'Edit asset'}
+                              aria-label={isRtl ? `تعديل ${asset.name}` : `Edit ${asset.name}`}
                               className="px-2 py-1 rounded text-xs font-medium text-awn-text-secondary hover:text-awn-primary hover:bg-awn-surface border border-transparent hover:border-awn-border inline-flex items-center gap-1 cursor-pointer"
                             >
                               <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
-                              <span>Edit</span>
+                              <span>{isRtl ? 'تعديل' : 'Edit'}</span>
                             </button>
 
                             {!isRetired && (
@@ -734,18 +796,34 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
                                 onClick={() => handleOpenReassign(asset)}
                                 title={
                                   asset.assignedTo
-                                    ? 'Reassign asset to another employee'
+                                    ? isRtl
+                                      ? 'نقل العهدة إلى موظف آخر'
+                                      : 'Reassign asset to another employee'
+                                    : isRtl
+                                    ? 'إسناد العهدة إلى موظف'
                                     : 'Assign asset to an employee'
                                 }
                                 aria-label={
                                   asset.assignedTo
-                                    ? `Reassign ${asset.name}`
+                                    ? isRtl
+                                      ? `نقل عهدة ${asset.name}`
+                                      : `Reassign ${asset.name}`
+                                    : isRtl
+                                    ? `إسناد ${asset.name}`
                                     : `Assign ${asset.name}`
                                 }
                                 className="px-2 py-1 rounded text-xs font-medium text-awn-text-secondary hover:text-awn-primary hover:bg-awn-surface border border-transparent hover:border-awn-border inline-flex items-center gap-1 cursor-pointer"
                               >
                                 <UserPlus className="w-3.5 h-3.5" aria-hidden="true" />
-                                <span>{asset.assignedTo ? 'Reassign' : 'Assign'}</span>
+                                <span>
+                                  {isRtl
+                                    ? asset.assignedTo
+                                      ? 'نقل العهدة'
+                                      : 'إسناد'
+                                    : asset.assignedTo
+                                    ? 'Reassign'
+                                    : 'Assign'}
+                                </span>
                               </button>
                             )}
 
@@ -753,8 +831,8 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
                               <button
                                 type="button"
                                 onClick={() => handleOpenRetire(asset)}
-                                title="Retire / Deactivate asset"
-                                aria-label={`Retire ${asset.name}`}
+                                title={isRtl ? 'إحالة الأصل للتقاعد / الاستبعاد' : 'Retire / Deactivate asset'}
+                                aria-label={isRtl ? `استبعاد ${asset.name}` : `Retire ${asset.name}`}
                                 className="p-1.5 rounded text-awn-text-muted hover:text-awn-error hover:bg-awn-error-soft border border-transparent cursor-pointer"
                               >
                                 <Ban className="w-3.5 h-3.5" aria-hidden="true" />
@@ -796,16 +874,16 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
 
                     <div className="text-xs text-awn-text-secondary space-y-1">
                       <div>
-                        <span className="text-awn-text-muted">Category: </span>
+                        <span className="text-awn-text-muted">{isRtl ? 'التصنيف: ' : 'Category: '}</span>
                         <span className="text-awn-text-primary font-medium">
                           {asset.category}
                         </span>
                         <span> · {asset.type}</span>
                       </div>
                       <div>
-                        <span className="text-awn-text-muted">Assigned To: </span>
+                        <span className="text-awn-text-muted">{isRtl ? 'المسند إليه: ' : 'Assigned To: '}</span>
                         <span className="text-awn-text-primary font-medium">
-                          {asset.assignedTo || 'Unassigned'}
+                          {asset.assignedTo || (isRtl ? 'غير مسند (بالمستودع)' : 'Unassigned')}
                         </span>
                         <span> · {asset.location}</span>
                       </div>
@@ -818,7 +896,7 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
                         leftIcon={<Eye className="w-3.5 h-3.5" />}
                         onClick={() => handleOpenView(asset)}
                       >
-                        View
+                        {isRtl ? 'عرض' : 'View'}
                       </Button>
                       <Button
                         variant="outline"
@@ -826,7 +904,7 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
                         leftIcon={<Pencil className="w-3.5 h-3.5" />}
                         onClick={() => handleOpenEdit(asset)}
                       >
-                        Edit
+                        {isRtl ? 'تعديل' : 'Edit'}
                       </Button>
                       {!isRetired && (
                         <Button
@@ -835,7 +913,13 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
                           leftIcon={<UserPlus className="w-3.5 h-3.5" />}
                           onClick={() => handleOpenReassign(asset)}
                         >
-                          {asset.assignedTo ? 'Reassign' : 'Assign'}
+                          {isRtl
+                            ? asset.assignedTo
+                              ? 'نقل العهدة'
+                              : 'إسناد'
+                            : asset.assignedTo
+                            ? 'Reassign'
+                            : 'Assign'}
                         </Button>
                       )}
                       {!isRetired && (
@@ -845,7 +929,7 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
                           leftIcon={<Ban className="w-3.5 h-3.5" />}
                           onClick={() => handleOpenRetire(asset)}
                         >
-                          Retire
+                          {isRtl ? 'استبعاد' : 'Retire'}
                         </Button>
                       )}
                     </div>
@@ -859,14 +943,29 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
         {/* Table Pagination Footer */}
         <div className="px-4 py-3 bg-awn-surface-alt border-t border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-awn-text-secondary">
           <div className="tabular-nums">
-            Page{' '}
-            <span className="font-semibold text-awn-text-primary">
-              {assetsData.pagination.page}
-            </span>{' '}
-            of{' '}
-            <span className="font-semibold text-awn-text-primary">
-              {assetsData.pagination.totalPages}
-            </span>
+            {isRtl ? (
+              <>
+                صفحة{' '}
+                <span className="font-semibold text-awn-text-primary">
+                  {formatNumber(assetsData.pagination.page)}
+                </span>{' '}
+                من{' '}
+                <span className="font-semibold text-awn-text-primary">
+                  {formatNumber(assetsData.pagination.totalPages)}
+                </span>
+              </>
+            ) : (
+              <>
+                Page{' '}
+                <span className="font-semibold text-awn-text-primary">
+                  {assetsData.pagination.page}
+                </span>{' '}
+                of{' '}
+                <span className="font-semibold text-awn-text-primary">
+                  {assetsData.pagination.totalPages}
+                </span>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -875,9 +974,9 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
               size="sm"
               disabled={assetsData.pagination.page <= 1 || loading}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              leftIcon={<ChevronLeft className="w-3.5 h-3.5" />}
+              leftIcon={isRtl ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
             >
-              Previous
+              {isRtl ? 'السابق' : 'Previous'}
             </Button>
             <Button
               variant="outline"
@@ -888,9 +987,9 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
               onClick={() =>
                 setCurrentPage((p) => Math.min(assetsData.pagination.totalPages, p + 1))
               }
-              rightIcon={<ChevronRight className="w-3.5 h-3.5" />}
+              rightIcon={isRtl ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
             >
-              Next
+              {isRtl ? 'التالي' : 'Next'}
             </Button>
           </div>
         </div>
@@ -902,8 +1001,12 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
       <Modal
         isOpen={newAssetModalOpen}
         onClose={() => setNewAssetModalOpen(false)}
-        title="New Asset — Select Classification"
-        description="Choose the governance classification for the asset you want to register. Each classification follows a tailored data capture and verification workflow."
+        title={isRtl ? 'تسجيل أصل جديد — اختيار نوع الرقابة' : 'New Asset — Select Classification'}
+        description={
+          isRtl
+            ? 'حدد ما إذا كان الأصل يخضع للاشتراطات التنظيمية والامتثال الحكومي، أم أصل قياسي لتتبع العهد والمستودع.'
+            : 'Choose the governance classification for the asset you want to register. Each classification follows a tailored data capture and verification workflow.'
+        }
         size="md"
         footer={
           <>
@@ -912,26 +1015,28 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
               size="sm"
               onClick={() => setNewAssetModalOpen(false)}
             >
-              Cancel
+              {isRtl ? 'إلغاء' : 'Cancel'}
             </Button>
             <Button
               variant="primary"
               size="sm"
-              rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+              rightIcon={isRtl ? <ArrowLeft className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
               onClick={handleProceedNewAsset}
             >
-              Continue to {selectedNewType}
+              {isRtl
+                ? `متابعة التسجيل (${selectedNewType === 'Compliance' ? 'أصل امتثال' : 'أصل قياسي'})`
+                : `Continue to ${selectedNewType}`}
             </Button>
           </>
         }
       >
-        <div className="space-y-3" role="radiogroup" aria-label="Asset classification choice">
+        <div className="space-y-3" role="radiogroup" aria-label={isRtl ? 'اختيار تصنيف الأصل' : 'Asset classification choice'}>
           <button
             type="button"
             role="radio"
             aria-checked={selectedNewType === 'Compliance'}
             onClick={() => setSelectedNewType('Compliance')}
-            className={`w-full text-left p-4 rounded-lg border transition-colors flex items-start gap-3.5 cursor-pointer ${
+            className={`w-full text-left rtl:text-right p-4 rounded-lg border transition-colors flex items-start gap-3.5 cursor-pointer ${
               selectedNewType === 'Compliance'
                 ? 'bg-awn-primary-soft border-awn-primary'
                 : 'bg-awn-surface border-awn-border hover:bg-awn-surface-alt'
@@ -943,15 +1048,16 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-awn-text-primary">
-                  Compliance Asset
+                  {isRtl ? 'أصل خاضع للامتثال النظامي' : 'Compliance Asset'}
                 </span>
                 <span className="text-xs font-medium text-awn-primary">
-                  Regulated & Audited
+                  {isRtl ? 'خاضع للرقابة والتدقيق' : 'Regulated & Audited'}
                 </span>
               </div>
               <p className="text-xs text-awn-text-secondary mt-1 leading-relaxed">
-                For critical equipment, safety systems, and enterprise licenses subject to
-                statutory inspection schedules, certification renewals, or regulatory audits.
+                {isRtl
+                  ? 'مركبات ومعدات ثقيلة، أنظمة إخماد وسلامة، أو أصول خاضعة للفحص الدوري والدفاع المدني وهيئة النقل.'
+                  : 'For critical equipment, safety systems, and enterprise licenses subject to statutory inspection schedules, certification renewals, or regulatory audits.'}
               </p>
             </div>
           </button>
@@ -961,27 +1067,28 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
             role="radio"
             aria-checked={selectedNewType === 'Non-Compliance'}
             onClick={() => setSelectedNewType('Non-Compliance')}
-            className={`w-full text-left p-4 rounded-lg border transition-colors flex items-start gap-3.5 cursor-pointer ${
+            className={`w-full text-left rtl:text-right p-4 rounded-lg border transition-colors flex items-start gap-3.5 cursor-pointer ${
               selectedNewType === 'Non-Compliance'
                 ? 'bg-awn-primary-soft border-awn-primary'
                 : 'bg-awn-surface border-awn-border hover:bg-awn-surface-alt'
             }`}
           >
-            <div className="w-9 h-9 rounded-md bg-awn-surface border border-awn-border flex items-center justify-center text-awn-primary shrink-0 mt-0.5">
+            <div className="w-9 h-9 rounded-md bg-awn-surface border border-awn-border flex items-center justify-center text-awn-text-secondary shrink-0 mt-0.5">
               <Package className="w-5 h-5" aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-awn-text-primary">
-                  Non-Compliance Asset
+                  {isRtl ? 'أصل قياسي (بدون اشتراطات امتثال)' : 'Non-Compliance Asset'}
                 </span>
-                <span className="text-xs font-medium text-awn-text-secondary">
-                  Standard Custody
+                <span className="text-xs font-medium text-awn-text-muted">
+                  {isRtl ? 'تتبع العهد والمستودع' : 'Standard Operations'}
                 </span>
               </div>
               <p className="text-xs text-awn-text-secondary mt-1 leading-relaxed">
-                For standard company devices, employee laptops, software subscriptions, and
-                office equipment tracked for custody, lifecycle, and inventory control.
+                {isRtl
+                  ? 'أجهزة الحاسوب والمحمول، الشاشات، الهواتف، التراخيص البرمجية، والأثاث المكتبي المدار لتتبع العهد.'
+                  : 'Operational equipment, laptops, workstations, peripherals, and software licenses tracked for custody and inventory.'}
               </p>
             </div>
           </button>

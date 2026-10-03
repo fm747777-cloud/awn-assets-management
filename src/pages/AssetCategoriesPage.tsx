@@ -23,6 +23,7 @@ import { ConfirmDialog, Modal } from '../components/ui/Modal.tsx';
 import { FormSection } from '../components/ui/FormSection.tsx';
 import { EmptyState } from '../components/ui/EmptyState.tsx';
 import { TableSkeleton } from '../components/ui/LoadingState.tsx';
+import { useLanguage } from '../hooks/useLanguage.tsx';
 import type {
   AssetCategoriesQueryResponse,
   AssetCategory,
@@ -39,6 +40,7 @@ const LANGUAGE_OPTIONS: SelectOption[] = [
 
 export default function AssetCategoriesPage() {
   const { showToast } = useToast();
+  const { isRtl, formatNumber } = useLanguage();
 
   // Table & Query State
   const [loading, setLoading] = useState(true);
@@ -284,27 +286,35 @@ export default function AssetCategoriesPage() {
     <div className="space-y-5">
       {/* Page Header with exact Title, Description, Summary ("89 Asset Categories"), and Actions ("Export CSV", "New Asset") */}
       <PageHeader
-        title="Asset Categories"
-        description="Organize and manage your assets efficiently by grouping them into relevant categories such as IT Equipment, Vehicles, Furniture, and more. This helps streamline tracking and reporting."
+        title={isRtl ? 'تصنيفات الأصول' : 'Asset Categories'}
+        description={
+          isRtl
+            ? 'تنظيم وهيكلة الأصول المؤسسية عبر تصنيفات معتمدة مثل تقنية المعلومات، المركبات، والأثاث، لتوحيد قيود الإهلاك والتقارير الرقابية.'
+            : 'Organize and manage your assets efficiently by grouping them into relevant categories such as IT Equipment, Vehicles, Furniture, and more. This helps streamline tracking and reporting.'
+        }
         contextMeta={
           <div className="flex flex-wrap items-center gap-2 text-xs text-awn-text-secondary tabular-nums">
             <span className="inline-flex items-center gap-1.5 font-semibold text-awn-text-primary">
               <FolderTree className="w-3.5 h-3.5 text-awn-primary" aria-hidden="true" />
-              <span>{categoriesData.summaryTotalLabel}</span>
+              <span>
+                {isRtl
+                  ? `${formatNumber(categoriesData.totalRecordsCount)} تصنيفات أصول`
+                  : categoriesData.summaryTotalLabel}
+              </span>
             </span>
             <span aria-hidden="true">·</span>
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {categoriesData.activeCount}
+                {formatNumber(categoriesData.activeCount)}
               </strong>{' '}
-              Active
+              {isRtl ? 'نشط' : 'Active'}
             </span>
             <span aria-hidden="true">·</span>
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {categoriesData.inactiveCount}
+                {formatNumber(categoriesData.inactiveCount)}
               </strong>{' '}
-              Inactive
+              {isRtl ? 'غير نشط' : 'Inactive'}
             </span>
           </div>
         }
@@ -315,7 +325,7 @@ export default function AssetCategoriesPage() {
             leftIcon={<Download className="w-4 h-4" />}
             onClick={handleExportCsv}
           >
-            Export CSV
+            {isRtl ? 'تصدير CSV' : 'Export CSV'}
           </Button>
         }
         primaryAction={
@@ -325,7 +335,7 @@ export default function AssetCategoriesPage() {
             leftIcon={<Plus className="w-4 h-4" />}
             onClick={handleOpenCreateModal}
           >
-            New Asset
+            {isRtl ? 'إضافة تصنيف' : 'New Category'}
           </Button>
         }
       />
@@ -336,18 +346,24 @@ export default function AssetCategoriesPage() {
         <div className="p-4 border-b border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="Search by Category ID, Category Name, Description..."
+              placeholder={
+                isRtl
+                  ? 'البحث برمز التصنيف، الاسم، الوصف...'
+                  : 'Search by Category ID, Category Name, Description...'
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onClear={() => setSearchQuery('')}
               leftIcon={<Search className="w-4 h-4" />}
-              aria-label="Search asset categories"
+              aria-label={isRtl ? 'بحث في تصنيفات الأصول' : 'Search asset categories'}
             />
           </div>
 
           <div className="flex items-center gap-2 text-xs text-awn-text-secondary">
             <span className="px-2.5 py-1 rounded-md bg-awn-surface-alt border border-awn-border font-semibold text-awn-text-primary tabular-nums">
-              {categoriesData.summaryTotalLabel}
+              {isRtl
+                ? `${formatNumber(categoriesData.totalRecordsCount)} تصنيف أصل`
+                : categoriesData.summaryTotalLabel}
             </span>
           </div>
         </div>
@@ -357,13 +373,25 @@ export default function AssetCategoriesPage() {
           <TableSkeleton rows={5} columns={6} />
         ) : categoriesData.items.length === 0 ? (
           <EmptyState
-            title="No Asset Categories Found"
+            title={isRtl ? 'لم يتم العثور على تصنيفات' : 'No Asset Categories Found'}
             description={
               searchQuery
-                ? `No asset categories matched "${searchQuery}". Try clearing your search query.`
+                ? isRtl
+                  ? `لا توجد تصنيفات تطابق "${searchQuery}". جرب إفراغ خانة البحث.`
+                  : `No asset categories matched "${searchQuery}". Try clearing your search query.`
+                : isRtl
+                ? 'لا توجد تصنيفات أصول مسجلة حالياً. انقر على "إضافة تصنيف" للبدء.'
                 : 'No asset categories are currently registered. Click "New Asset" to create your first category.'
             }
-            primaryActionLabel={searchQuery ? 'Clear Search' : 'New Asset'}
+            primaryActionLabel={
+              searchQuery
+                ? isRtl
+                  ? 'مسح البحث'
+                  : 'Clear Search'
+                : isRtl
+                ? 'إضافة تصنيف'
+                : 'New Asset'
+            }
             onPrimaryAction={
               searchQuery ? () => setSearchQuery('') : handleOpenCreateModal
             }
@@ -371,16 +399,24 @@ export default function AssetCategoriesPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left rtl:text-right border-collapse">
                 <thead>
                   <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                    <th className="py-3 px-4 whitespace-nowrap">Category ID</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Category Name</th>
-                    <th className="py-3 px-4">Description</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Created Date</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Status</th>
-                    <th className="py-3 px-4 whitespace-nowrap text-right">
-                      Actions
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'رمز التصنيف' : 'Category ID'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'اسم التصنيف' : 'Category Name'}
+                    </th>
+                    <th className="py-3 px-4">{isRtl ? 'الوصف' : 'Description'}</th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'تاريخ الإنشاء' : 'Created Date'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'الحالة' : 'Status'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
+                      {isRtl ? 'الإجراءات' : 'Actions'}
                     </th>
                   </tr>
                 </thead>
@@ -485,18 +521,34 @@ export default function AssetCategoriesPage() {
             {/* Pagination Footer */}
             <div className="px-4 py-3 border-t border-awn-border bg-awn-surface flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-awn-text-secondary">
               <div className="tabular-nums">
-                Showing{' '}
-                <strong className="font-semibold text-awn-text-primary">
-                  {categoriesData.items.length}
-                </strong>{' '}
-                of{' '}
-                <strong className="font-semibold text-awn-text-primary">
-                  {categoriesData.pagination.totalItems}
-                </strong>{' '}
-                displayed records ·{' '}
-                <strong className="font-semibold text-awn-text-primary">
-                  {categoriesData.summaryTotalLabel}
-                </strong>
+                {isRtl ? (
+                  <>
+                    عرض{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {formatNumber(categoriesData.items.length)}
+                    </strong>{' '}
+                    من أصل{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {formatNumber(categoriesData.pagination.totalItems)}
+                    </strong>{' '}
+                    سجل
+                  </>
+                ) : (
+                  <>
+                    Showing{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {categoriesData.items.length}
+                    </strong>{' '}
+                    of{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {categoriesData.pagination.totalItems}
+                    </strong>{' '}
+                    displayed records ·{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {categoriesData.summaryTotalLabel}
+                    </strong>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -505,21 +557,23 @@ export default function AssetCategoriesPage() {
                   size="sm"
                   disabled={currentPage <= 1}
                   onClick={() => fetchCategories(currentPage - 1)}
-                  leftIcon={<ChevronLeft className="w-3.5 h-3.5" />}
+                  leftIcon={isRtl ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
                 >
-                  Previous
+                  {isRtl ? 'السابق' : 'Previous'}
                 </Button>
                 <span className="px-2.5 py-1 font-mono text-xs text-awn-text-primary tabular-nums">
-                  Page {currentPage} of {categoriesData.pagination.totalPages}
+                  {isRtl
+                    ? `صفحة ${formatNumber(currentPage)} من ${formatNumber(categoriesData.pagination.totalPages)}`
+                    : `Page ${currentPage} of ${categoriesData.pagination.totalPages}`}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={currentPage >= categoriesData.pagination.totalPages}
                   onClick={() => fetchCategories(currentPage + 1)}
-                  rightIcon={<ChevronRight className="w-3.5 h-3.5" />}
+                  rightIcon={isRtl ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                 >
-                  Next
+                  {isRtl ? 'التالي' : 'Next'}
                 </Button>
               </div>
             </div>

@@ -15,6 +15,7 @@ import { TableSkeleton } from './LoadingState.tsx';
 import type { WorkspaceRecordItem } from '../../types/asset.ts';
 import type { PaginationState } from '../../types/common.ts';
 import type { TableFilterTab } from '../../types/ui.ts';
+import { useLanguage } from '../../hooks/useLanguage.tsx';
 
 const STATUS_FILTERS: TableFilterTab[] = [
   { id: 'ALL', label: 'All Records' },
@@ -60,6 +61,15 @@ export function DataTable<TRow extends WorkspaceRecordItem = WorkspaceRecordItem
   createLabel = 'Register Record',
   toolbarSlot = null,
 }: DataTableProps<TRow>) {
+  const { isRtl, formatNumber } = useLanguage();
+
+  const statusFilterTabs: TableFilterTab[] = [
+    { id: 'ALL', label: isRtl ? 'كافة السجلات' : 'All Records' },
+    { id: 'success', label: isRtl ? 'نشط / متوافق' : 'Active / Compliant' },
+    { id: 'warning', label: isRtl ? 'متابعة / مستحق' : 'Attention / Due' },
+    { id: 'info', label: isRtl ? 'متاح / مراجعة' : 'Available / Review' },
+  ];
+
   return (
     <div className="bg-awn-surface border border-awn-border rounded-lg overflow-hidden">
       <div className="p-4 border-b border-awn-border space-y-3.5">
@@ -76,12 +86,12 @@ export function DataTable<TRow extends WorkspaceRecordItem = WorkspaceRecordItem
           <div className="flex flex-wrap items-center gap-2">
             <div className="w-full sm:w-64">
               <Input
-                placeholder="Search code, name, custodian..."
+                placeholder={isRtl ? 'البحث بالرمز، الاسم، أمين العهدة...' : 'Search code, name, custodian...'}
                 value={searchQuery}
                 onChange={(e) => onSearchChange?.(e.target.value)}
                 onClear={() => onSearchChange?.('')}
                 leftIcon={<Search className="w-3.5 h-3.5" />}
-                aria-label="Search records"
+                aria-label={isRtl ? 'بحث في السجلات' : 'Search records'}
               />
             </div>
             {toolbarSlot}
@@ -91,10 +101,10 @@ export function DataTable<TRow extends WorkspaceRecordItem = WorkspaceRecordItem
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
           <div
             role="group"
-            aria-label="Filter records by status"
+            aria-label={isRtl ? 'تصفية السجلات حسب الحالة' : 'Filter records by status'}
             className="inline-flex flex-wrap items-center gap-1 p-1 rounded-md bg-awn-surface-alt border border-awn-border"
           >
-            {STATUS_FILTERS.map((tab) => {
+            {statusFilterTabs.map((tab) => {
               const active = statusFilter === tab.id;
               return (
                 <button
@@ -114,9 +124,19 @@ export function DataTable<TRow extends WorkspaceRecordItem = WorkspaceRecordItem
           </div>
 
           <div className="text-xs text-awn-text-muted tabular-nums">
-            Showing <span className="font-semibold text-awn-text-primary">{items.length}</span> of{' '}
-            <span className="font-semibold text-awn-text-primary">{pagination.totalItems}</span>{' '}
-            records
+            {isRtl ? (
+              <>
+                عرض <span className="font-semibold text-awn-text-primary">{formatNumber(items.length)}</span> من أصل{' '}
+                <span className="font-semibold text-awn-text-primary">{formatNumber(pagination.totalItems)}</span>{' '}
+                سجل
+              </>
+            ) : (
+              <>
+                Showing <span className="font-semibold text-awn-text-primary">{items.length}</span> of{' '}
+                <span className="font-semibold text-awn-text-primary">{pagination.totalItems}</span>{' '}
+                records
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -148,16 +168,30 @@ export function DataTable<TRow extends WorkspaceRecordItem = WorkspaceRecordItem
       ) : (
         <>
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left rtl:text-right border-collapse">
               <thead>
                 <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                  <th className="py-3 px-4 whitespace-nowrap">Reference ID</th>
-                  <th className="py-3 px-4">Record Designation</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Category & Type</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Location & Custodian</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Status</th>
-                  <th className="py-3 px-4 whitespace-nowrap text-right">Last Updated</th>
-                  <th className="py-3 px-4 whitespace-nowrap text-right">Actions</th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {isRtl ? 'رمز السجل' : 'Reference ID'}
+                  </th>
+                  <th className="py-3 px-4">
+                    {isRtl ? 'اسم الأصل والسجل' : 'Record Designation'}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {isRtl ? 'التصنيف والنوع' : 'Category & Type'}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {isRtl ? 'الموقع وأمين العهدة' : 'Location & Custodian'}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {isRtl ? 'الحالة' : 'Status'}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
+                    {isRtl ? 'آخر تحديث' : 'Last Updated'}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
+                    {isRtl ? 'الإجراءات' : 'Actions'}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-awn-border text-sm">
@@ -286,8 +320,17 @@ export function DataTable<TRow extends WorkspaceRecordItem = WorkspaceRecordItem
 
       <div className="px-4 py-3 bg-awn-surface-alt border-t border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-awn-text-secondary">
         <div className="tabular-nums">
-          Page <span className="font-semibold text-awn-text-primary">{pagination.page}</span> of{' '}
-          <span className="font-semibold text-awn-text-primary">{pagination.totalPages}</span>
+          {isRtl ? (
+            <>
+              صفحة <span className="font-semibold text-awn-text-primary">{formatNumber(pagination.page)}</span> من{' '}
+              <span className="font-semibold text-awn-text-primary">{formatNumber(pagination.totalPages)}</span>
+            </>
+          ) : (
+            <>
+              Page <span className="font-semibold text-awn-text-primary">{pagination.page}</span> of{' '}
+              <span className="font-semibold text-awn-text-primary">{pagination.totalPages}</span>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -296,18 +339,18 @@ export function DataTable<TRow extends WorkspaceRecordItem = WorkspaceRecordItem
             size="sm"
             disabled={pagination.page <= 1 || loading}
             onClick={() => onPageChange?.(pagination.page - 1)}
-            leftIcon={<ChevronLeft className="w-3.5 h-3.5" />}
+            leftIcon={isRtl ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
           >
-            Previous
+            {isRtl ? 'السابق' : 'Previous'}
           </Button>
           <Button
             variant="outline"
             size="sm"
             disabled={pagination.page >= pagination.totalPages || loading}
             onClick={() => onPageChange?.(pagination.page + 1)}
-            rightIcon={<ChevronRight className="w-3.5 h-3.5" />}
+            rightIcon={isRtl ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
           >
-            Next
+            {isRtl ? 'التالي' : 'Next'}
           </Button>
         </div>
       </div>

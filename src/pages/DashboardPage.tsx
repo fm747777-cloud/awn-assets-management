@@ -10,6 +10,7 @@ import { AssetsByLocationBars } from '../components/dashboard/AssetsByLocationBa
 import { RecentActivityFeed } from '../components/dashboard/RecentActivityFeed.tsx';
 import { AssetAlertsSection } from '../components/dashboard/AssetAlertsSection.tsx';
 import { MetricStripSkeleton, TableSkeleton } from '../components/ui/LoadingState.tsx';
+import { useLanguage } from '../hooks/useLanguage.tsx';
 
 export interface DashboardPageProps {
   onNavigate: (path: string) => void;
@@ -25,7 +26,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [data, setData] = useState<DashboardDataResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [language, setLanguage] = useState<'en' | 'ar'>('en');
+  const { language } = useLanguage();
 
   const loadData = useCallback(async (currentFilters: DashboardFilterState, isSilent = false) => {
     if (!isSilent) setIsLoading(true);
@@ -61,10 +62,6 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
     loadData(filters, true);
   };
 
-  const toggleLanguage = () => {
-    setLanguage((prev) => (prev === 'en' ? 'ar' : 'en'));
-  };
-
   if (isLoading || !data) {
     return (
       <div className="space-y-5 animate-pulse" aria-label="Loading dashboard analytics">
@@ -90,17 +87,16 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
   return (
     <div
       dir={isRtl ? 'rtl' : 'ltr'}
-      className={`space-y-5 ${isRtl ? 'font-sans' : ''}`}
+      className={`dashboard-workspace space-y-5 ${isRtl ? 'font-sans' : ''}`}
       aria-label={isRtl ? 'مركز قيادة الأصول - لوحة المراقبة' : 'Asset Command Center Dashboard'}
     >
-      {/* 1. Header with Filters & Language Switcher */}
+      {/* 1. Header with Filters & Refresh */}
       <DashboardHeader
         filters={filters}
         onFilterChange={handleFilterChange}
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
         language={language}
-        onToggleLanguage={toggleLanguage}
         lastUpdated={data.lastUpdated}
       />
 

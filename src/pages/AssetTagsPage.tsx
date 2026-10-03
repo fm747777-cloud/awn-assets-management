@@ -23,6 +23,7 @@ import { ConfirmDialog, Modal } from '../components/ui/Modal.tsx';
 import { FormSection } from '../components/ui/FormSection.tsx';
 import { EmptyState } from '../components/ui/EmptyState.tsx';
 import { TableSkeleton } from '../components/ui/LoadingState.tsx';
+import { useLanguage } from '../hooks/useLanguage.tsx';
 import type {
   AssetTag,
   AssetTagFormData,
@@ -39,6 +40,7 @@ const LANGUAGE_OPTIONS: SelectOption[] = [
 
 export default function AssetTagsPage() {
   const { showToast } = useToast();
+  const { isRtl, formatNumber } = useLanguage();
 
   // Table & Query State
   const [loading, setLoading] = useState(true);
@@ -280,27 +282,35 @@ export default function AssetTagsPage() {
     <div className="space-y-5">
       {/* Page Header with exact Title, Description, and Actions ("Export CSV", "New Tag") */}
       <PageHeader
-        title="Asset Tags"
-        description="Assign specific tags to assets for easier categorization, quick filtering, and efficient tracking. Tags help in organizing large inventories by function, location, or status."
+        title={isRtl ? 'وسوم الأصول' : 'Asset Tags'}
+        description={
+          isRtl
+            ? 'وسوم تشغيلية لتسهيل ربط الأصول بمراكز التكلفة والمشاريع والأغراض الرقابية، وتنظيم الجرد الميداني.'
+            : 'Assign specific tags to assets for easier categorization, quick filtering, and efficient tracking. Tags help in organizing large inventories by function, location, or status.'
+        }
         contextMeta={
           <div className="flex flex-wrap items-center gap-2 text-xs text-awn-text-secondary tabular-nums">
             <span className="inline-flex items-center gap-1.5 font-semibold text-awn-text-primary">
               <Tag className="w-3.5 h-3.5 text-awn-primary" aria-hidden="true" />
-              <span>{tagsData.summaryTotalLabel}</span>
+              <span>
+                {isRtl
+                  ? `${formatNumber(tagsData.totalRecordsCount)} وسوم أصول`
+                  : tagsData.summaryTotalLabel}
+              </span>
             </span>
             <span aria-hidden="true">·</span>
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {tagsData.activeCount}
+                {formatNumber(tagsData.activeCount)}
               </strong>{' '}
-              Active
+              {isRtl ? 'نشط' : 'Active'}
             </span>
             <span aria-hidden="true">·</span>
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {tagsData.inactiveCount}
+                {formatNumber(tagsData.inactiveCount)}
               </strong>{' '}
-              Inactive
+              {isRtl ? 'غير نشط' : 'Inactive'}
             </span>
           </div>
         }
@@ -311,7 +321,7 @@ export default function AssetTagsPage() {
             leftIcon={<Download className="w-4 h-4" />}
             onClick={handleExportCsv}
           >
-            Export CSV
+            {isRtl ? 'تصدير CSV' : 'Export CSV'}
           </Button>
         }
         primaryAction={
@@ -321,7 +331,7 @@ export default function AssetTagsPage() {
             leftIcon={<Plus className="w-4 h-4" />}
             onClick={handleOpenCreateModal}
           >
-            New Tag
+            {isRtl ? 'إضافة وسم' : 'New Tag'}
           </Button>
         }
       />
@@ -332,18 +342,24 @@ export default function AssetTagsPage() {
         <div className="p-4 border-b border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="Search by Tag ID, Tag Name, Description..."
+              placeholder={
+                isRtl
+                  ? 'البحث برمز الوسم، الاسم، الوصف...'
+                  : 'Search by Tag ID, Tag Name, Description...'
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onClear={() => setSearchQuery('')}
               leftIcon={<Search className="w-4 h-4" />}
-              aria-label="Search asset tags"
+              aria-label={isRtl ? 'بحث في وسوم الأصول' : 'Search asset tags'}
             />
           </div>
 
           <div className="flex items-center gap-2 text-xs text-awn-text-secondary">
             <span className="px-2.5 py-1 rounded-md bg-awn-surface-alt border border-awn-border font-semibold text-awn-text-primary tabular-nums">
-              {tagsData.summaryTotalLabel}
+              {isRtl
+                ? `${formatNumber(tagsData.totalRecordsCount)} وسم أصل`
+                : tagsData.summaryTotalLabel}
             </span>
           </div>
         </div>
@@ -353,13 +369,25 @@ export default function AssetTagsPage() {
           <TableSkeleton rows={5} columns={6} />
         ) : tagsData.items.length === 0 ? (
           <EmptyState
-            title="No Asset Tags Found"
+            title={isRtl ? 'لم يتم العثور على وسوم' : 'No Asset Tags Found'}
             description={
               searchQuery
-                ? `No asset tags matched "${searchQuery}". Try clearing your search query.`
+                ? isRtl
+                  ? `لا توجد وسوم تطابق "${searchQuery}". جرب إفراغ خانة البحث.`
+                  : `No asset tags matched "${searchQuery}". Try clearing your search query.`
+                : isRtl
+                ? 'لا توجد وسوم أصول مسجلة حالياً. انقر على "إضافة وسم" للبدء.'
                 : 'No asset tags are currently registered. Click "New Tag" to create your first tag.'
             }
-            primaryActionLabel={searchQuery ? 'Clear Search' : 'New Tag'}
+            primaryActionLabel={
+              searchQuery
+                ? isRtl
+                  ? 'مسح البحث'
+                  : 'Clear Search'
+                : isRtl
+                ? 'إضافة وسم'
+                : 'New Tag'
+            }
             onPrimaryAction={
               searchQuery ? () => setSearchQuery('') : handleOpenCreateModal
             }
@@ -367,16 +395,24 @@ export default function AssetTagsPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left rtl:text-right border-collapse">
                 <thead>
                   <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                    <th className="py-3 px-4 whitespace-nowrap">Tag ID</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Tag Name</th>
-                    <th className="py-3 px-4">Description</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Created Date</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Status</th>
-                    <th className="py-3 px-4 whitespace-nowrap text-right">
-                      Actions
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'رمز الوسم' : 'Tag ID'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'اسم الوسم' : 'Tag Name'}
+                    </th>
+                    <th className="py-3 px-4">{isRtl ? 'الوصف' : 'Description'}</th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'تاريخ الإنشاء' : 'Created Date'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {isRtl ? 'الحالة' : 'Status'}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
+                      {isRtl ? 'الإجراءات' : 'Actions'}
                     </th>
                   </tr>
                 </thead>
@@ -481,18 +517,34 @@ export default function AssetTagsPage() {
             {/* Pagination Footer */}
             <div className="px-4 py-3 border-t border-awn-border bg-awn-surface flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-awn-text-secondary">
               <div className="tabular-nums">
-                Showing{' '}
-                <strong className="font-semibold text-awn-text-primary">
-                  {tagsData.items.length}
-                </strong>{' '}
-                of{' '}
-                <strong className="font-semibold text-awn-text-primary">
-                  {tagsData.pagination.totalItems}
-                </strong>{' '}
-                displayed records ·{' '}
-                <strong className="font-semibold text-awn-text-primary">
-                  {tagsData.summaryTotalLabel}
-                </strong>
+                {isRtl ? (
+                  <>
+                    عرض{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {formatNumber(tagsData.items.length)}
+                    </strong>{' '}
+                    من أصل{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {formatNumber(tagsData.pagination.totalItems)}
+                    </strong>{' '}
+                    سجل
+                  </>
+                ) : (
+                  <>
+                    Showing{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {tagsData.items.length}
+                    </strong>{' '}
+                    of{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {tagsData.pagination.totalItems}
+                    </strong>{' '}
+                    displayed records ·{' '}
+                    <strong className="font-semibold text-awn-text-primary">
+                      {tagsData.summaryTotalLabel}
+                    </strong>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -501,21 +553,23 @@ export default function AssetTagsPage() {
                   size="sm"
                   disabled={currentPage <= 1}
                   onClick={() => fetchTags(currentPage - 1)}
-                  leftIcon={<ChevronLeft className="w-3.5 h-3.5" />}
+                  leftIcon={isRtl ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
                 >
-                  Previous
+                  {isRtl ? 'السابق' : 'Previous'}
                 </Button>
                 <span className="px-2.5 py-1 font-mono text-xs text-awn-text-primary tabular-nums">
-                  Page {currentPage} of {tagsData.pagination.totalPages}
+                  {isRtl
+                    ? `صفحة ${formatNumber(currentPage)} من ${formatNumber(tagsData.pagination.totalPages)}`
+                    : `Page ${currentPage} of ${tagsData.pagination.totalPages}`}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={currentPage >= tagsData.pagination.totalPages}
                   onClick={() => fetchTags(currentPage + 1)}
-                  rightIcon={<ChevronRight className="w-3.5 h-3.5" />}
+                  rightIcon={isRtl ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                 >
-                  Next
+                  {isRtl ? 'التالي' : 'Next'}
                 </Button>
               </div>
             </div>

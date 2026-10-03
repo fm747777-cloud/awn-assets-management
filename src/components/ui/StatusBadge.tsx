@@ -8,6 +8,30 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { StatusTone } from '../../types/status.ts';
+import { useLanguage } from '../../hooks/useLanguage.tsx';
+
+const STATUS_ARABIC_MAP: Record<string, string> = {
+  Assigned: 'مسند بالعهدة',
+  Available: 'متاح بالمستودع',
+  'Compliance Due': 'استحقاق امتثال',
+  'In Maintenance': 'تحت الصيانة',
+  Retired: 'مستبعد',
+  Active: 'نشط',
+  Inactive: 'غير نشط',
+  Draft: 'مسودة',
+  Compliant: 'متوافق',
+  'Non-Compliant': 'غير متوافق',
+  'Pending Inspection': 'بانتظار الفحص',
+  'Under Review': 'قيد المراجعة',
+  Approved: 'معتمد',
+  Verified: 'تم التحقق',
+  'Attention Required': 'متابعة عاجلة',
+  CompliantMandate: 'اشتراط امتثال',
+  'Standard Operational': 'تشغيلي قياسي',
+  Standard: 'قياسي',
+  Compliance: 'امتثال',
+  'Non-Compliance': 'قياسي',
+};
 
 const TONE_CONFIG: Record<StatusTone, { icon: LucideIcon; classes: string }> = {
   success: {
@@ -49,15 +73,17 @@ export function StatusBadge({
   showIcon = true,
   className = '',
 }: StatusBadgeProps) {
+  const { isRtl } = useLanguage();
   const config = TONE_CONFIG[tone] || TONE_CONFIG.neutral;
   const Icon = config.icon;
+  const displayLabel = isRtl && STATUS_ARABIC_MAP[label] ? STATUS_ARABIC_MAP[label] : label;
 
   return (
     <span
       className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded border whitespace-nowrap shrink-0 ${config.classes} ${className}`}
     >
       {showIcon && <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
-      <span>{label}</span>
+      <span>{displayLabel}</span>
     </span>
   );
 }

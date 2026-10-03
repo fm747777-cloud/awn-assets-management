@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { NAVIGATION_TREE } from '../data/navigationData.ts';
 import { RouteIcon } from '../utils/iconMap.tsx';
+import { useLanguage } from '../hooks/useLanguage.tsx';
 
 export interface SidebarProps {
   currentPath?: string;
@@ -26,6 +27,7 @@ export function Sidebar({
   mobileOpen = false,
   onCloseMobile,
 }: SidebarProps) {
+  const { isRtl, t } = useLanguage();
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     'assets-group': true,
     'master-group': true,
@@ -45,13 +47,13 @@ export function Sidebar({
   };
 
   const renderTreeContent = (isCompact = false) => (
-    <div className="flex flex-col h-full bg-awn-surface border-r border-awn-border select-none">
+    <div className="flex flex-col h-full bg-awn-surface border-r rtl:border-r-0 rtl:border-l border-awn-border select-none">
       {/* Brand Lockup */}
       <div className="h-14 px-4 border-b border-awn-border flex items-center justify-between gap-2 shrink-0">
         <button
           type="button"
           onClick={() => handleSelectPath('/assets/registry')}
-          className="flex items-center gap-2.5 text-left min-w-0 cursor-pointer"
+          className="flex items-center gap-2.5 text-left rtl:text-right min-w-0 cursor-pointer"
         >
           <div className="w-8 h-8 rounded-md bg-awn-primary text-awn-on-primary flex items-center justify-center font-semibold text-sm shrink-0">
             ع
@@ -59,10 +61,10 @@ export function Sidebar({
           {!isCompact && (
             <div className="min-w-0">
               <div className="text-sm font-semibold tracking-tight text-awn-text-primary truncate">
-                AWN (عَوْن)
+                {isRtl ? 'نظام عَوْن (AWN)' : 'AWN (عَوْن)'}
               </div>
               <div className="text-xs text-awn-text-muted truncate">
-                Assets Module
+                {isRtl ? 'إدارة الأصول' : 'Assets Module'}
               </div>
             </div>
           )}
@@ -72,7 +74,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={onCloseMobile}
-            aria-label="Close navigation menu"
+            aria-label={isRtl ? 'إغلاق القائمة' : 'Close navigation menu'}
             className="lg:hidden p-1.5 rounded-md text-awn-text-secondary hover:text-awn-text-primary hover:bg-awn-surface-alt cursor-pointer"
           >
             <X className="w-4 h-4" />
@@ -81,14 +83,14 @@ export function Sidebar({
           <button
             type="button"
             onClick={onToggleCollapse}
-            title={isCompact ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-label={isCompact ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={isCompact ? (isRtl ? 'توسيع القائمة' : 'Expand sidebar') : (isRtl ? 'طي القائمة' : 'Collapse sidebar')}
+            aria-label={isCompact ? (isRtl ? 'توسيع القائمة' : 'Expand sidebar') : (isRtl ? 'طي القائمة' : 'Collapse sidebar')}
             className="hidden lg:inline-flex p-1.5 rounded-md text-awn-text-muted hover:text-awn-text-primary hover:bg-awn-surface-alt cursor-pointer"
           >
             {isCompact ? (
-              <PanelLeftOpen className="w-4 h-4" />
+              <PanelLeftOpen className={`w-4 h-4 ${isRtl ? 'rotate-180' : ''}`} />
             ) : (
-              <PanelLeftClose className="w-4 h-4" />
+              <PanelLeftClose className={`w-4 h-4 ${isRtl ? 'rotate-180' : ''}`} />
             )}
           </button>
         )}
@@ -99,11 +101,11 @@ export function Sidebar({
         <div>
           {!isCompact && (
             <div className="px-2.5 pb-2 text-xs font-semibold text-awn-text-muted">
-              Assets Workspace
+              {isRtl ? 'منظومة الأصول' : 'Assets Workspace'}
             </div>
           )}
 
-          <nav aria-label="Assets Module Navigation" className="space-y-1">
+          <nav aria-label={isRtl ? 'التنقل في مساحات الأصول' : 'Assets Module Navigation'} className="space-y-1">
             {NAVIGATION_TREE.map((item) => {
               const children = item.children || [];
               const hasChildren = children.length > 0;
@@ -111,6 +113,7 @@ export function Sidebar({
               const isChildActive =
                 hasChildren && children.some((child) => child.path === currentPath);
               const isExpanded = Boolean(expandedGroups[item.id]);
+              const itemLabel = isRtl ? item.arabicLabel || item.label : item.label;
 
               if (!hasChildren) {
                 return (
@@ -118,7 +121,7 @@ export function Sidebar({
                     key={item.id}
                     type="button"
                     onClick={() => handleSelectPath(item.path)}
-                    title={isCompact ? item.label : undefined}
+                    title={isCompact ? itemLabel : undefined}
                     aria-current={isDirectActive ? 'page' : undefined}
                     className={`w-full flex items-center ${
                       isCompact ? 'justify-center px-2' : 'justify-between px-2.5'
@@ -135,7 +138,7 @@ export function Sidebar({
                           isDirectActive ? 'text-awn-primary' : 'text-awn-text-muted'
                         }`}
                       />
-                      {!isCompact && <span className="truncate">{item.label}</span>}
+                      {!isCompact && <span className="truncate">{itemLabel}</span>}
                     </span>
                   </button>
                 );
@@ -168,11 +171,11 @@ export function Sidebar({
                           toggleGroup(item.id);
                         }
                       }}
-                      title={isCompact ? item.label : undefined}
+                      title={isCompact ? itemLabel : undefined}
                       aria-current={isDirectActive ? 'page' : undefined}
                       className={`flex-1 flex items-center ${
                         isCompact ? 'justify-center px-2' : 'gap-2.5 px-2.5'
-                      } py-2 text-xs text-left min-w-0 cursor-pointer`}
+                      } py-2 text-xs text-left rtl:text-right min-w-0 cursor-pointer`}
                     >
                       <RouteIcon
                         name={item.icon}
@@ -182,30 +185,31 @@ export function Sidebar({
                             : 'text-awn-text-muted'
                         }`}
                       />
-                      {!isCompact && <span className="truncate">{item.label}</span>}
+                      {!isCompact && <span className="truncate">{itemLabel}</span>}
                     </button>
 
                     {!isCompact && (
                       <button
                         type="button"
                         onClick={() => toggleGroup(item.id)}
-                        aria-label={`Toggle ${item.label} submenu`}
+                        aria-label={isRtl ? `تبديل قائمة ${itemLabel}` : `Toggle ${itemLabel} submenu`}
                         aria-expanded={isExpanded}
                         className="p-2 text-awn-text-muted hover:text-awn-text-primary cursor-pointer"
                       >
                         {isExpanded ? (
                           <ChevronDown className="w-3.5 h-3.5" />
                         ) : (
-                          <ChevronRight className="w-3.5 h-3.5" />
+                          <ChevronRight className={`w-3.5 h-3.5 ${isRtl ? 'rotate-180' : ''}`} />
                         )}
                       </button>
                     )}
                   </div>
 
                   {!isCompact && isExpanded && (
-                    <div className="ml-4 pl-3 border-l border-awn-border space-y-0.5">
+                    <div className="ml-4 pl-3 border-l rtl:ml-0 rtl:mr-4 rtl:pl-0 rtl:pr-3 rtl:border-l-0 rtl:border-r border-awn-border space-y-0.5">
                       {children.map((child) => {
                         const childActive = currentPath === child.path;
+                        const childLabel = isRtl ? child.arabicLabel || child.label : child.label;
                         return (
                           <button
                             key={child.id}
@@ -224,7 +228,7 @@ export function Sidebar({
                                 childActive ? 'text-awn-primary' : 'text-awn-text-muted'
                               }`}
                             />
-                            <span className="truncate">{child.label}</span>
+                            <span className="truncate">{childLabel}</span>
                           </button>
                         );
                       })}
@@ -241,15 +245,15 @@ export function Sidebar({
         {isCompact ? (
           <div
             className="text-center text-xs font-mono text-awn-text-muted tabular-nums"
-            title="AWN Assets Workspace"
+            title={isRtl ? 'سجل أصول عَوْن' : 'AWN Assets Workspace'}
           >
             AWN
           </div>
         ) : (
           <div className="flex items-center justify-between text-xs text-awn-text-secondary">
-            <span>AWN Enterprise</span>
+            <span>{isRtl ? 'منظومة عَوْن المؤسسية' : 'AWN Enterprise'}</span>
             <span className="font-mono text-awn-text-primary font-medium tabular-nums">
-              Assets v1.0
+              {isRtl ? 'الأصول 1.0' : 'Assets v1.0'}
             </span>
           </div>
         )}

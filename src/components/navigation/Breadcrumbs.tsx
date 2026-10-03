@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import type { BreadcrumbItem } from '../../types/navigation.ts';
+import { useLanguage } from '../../hooks/useLanguage.tsx';
 
 interface BreadcrumbsProps {
   items?: BreadcrumbItem[];
@@ -8,10 +9,11 @@ interface BreadcrumbsProps {
 }
 
 export function Breadcrumbs({ items = [], onNavigate }: BreadcrumbsProps) {
+  const { isRtl } = useLanguage();
   if (!items.length) return null;
 
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center text-xs text-awn-text-secondary">
+    <nav aria-label={isRtl ? 'مسار التنقل' : 'Breadcrumb'} className="flex items-center text-xs text-awn-text-secondary">
       <ol className="flex flex-wrap items-center gap-1.5">
         <li className="flex items-center gap-1.5">
           <button
@@ -19,21 +21,22 @@ export function Breadcrumbs({ items = [], onNavigate }: BreadcrumbsProps) {
             onClick={() => onNavigate?.('/assets/registry')}
             className="text-awn-text-muted hover:text-awn-text-primary transition-colors font-medium cursor-pointer"
           >
-            AWN (عَوْن)
+            {isRtl ? 'نظام عَوْن' : 'AWN (عَوْن)'}
           </button>
         </li>
 
         {items.map((crumb, index) => {
           const isLast = index === items.length - 1;
+          const crumbLabel = isRtl ? crumb.arabicLabel || crumb.label : crumb.label;
           return (
             <li key={`${crumb.label}-${index}`} className="flex items-center gap-1.5">
-              <ChevronRight className="w-3.5 h-3.5 text-awn-text-muted shrink-0" aria-hidden="true" />
+              <ChevronRight className={`w-3.5 h-3.5 text-awn-text-muted shrink-0 ${isRtl ? 'rotate-180' : ''}`} aria-hidden="true" />
               {isLast ? (
                 <span
                   aria-current="page"
                   className="font-semibold text-awn-text-primary"
                 >
-                  {crumb.label}
+                  {crumbLabel}
                 </span>
               ) : (
                 <button
@@ -41,7 +44,7 @@ export function Breadcrumbs({ items = [], onNavigate }: BreadcrumbsProps) {
                   onClick={() => onNavigate?.(crumb.path)}
                   className="text-awn-text-secondary hover:text-awn-text-primary transition-colors cursor-pointer"
                 >
-                  {crumb.label}
+                  {crumbLabel}
                 </button>
               )}
             </li>

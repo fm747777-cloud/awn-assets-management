@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar.tsx';
 import { Header } from './Header.tsx';
 import { Breadcrumbs } from '../components/navigation/Breadcrumbs.tsx';
 import type { ResolvedRoute } from '../types/navigation.ts';
+import { useLanguage } from '../hooks/useLanguage.tsx';
 
 export interface AppShellProps {
   currentRoute: ResolvedRoute;
@@ -13,9 +14,10 @@ export interface AppShellProps {
 export function AppShell({ currentRoute, onNavigate, children }: AppShellProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const { dir, isRtl } = useLanguage();
 
   return (
-    <div className="min-h-screen flex bg-awn-bg text-awn-text-primary">
+    <div dir={dir} className={`min-h-screen flex bg-awn-bg text-awn-text-primary ${isRtl ? 'font-sans' : ''}`}>
       <Sidebar
         currentPath={currentRoute?.path}
         onNavigate={onNavigate}

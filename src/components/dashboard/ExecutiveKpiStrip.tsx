@@ -21,13 +21,13 @@ export function ExecutiveKpiStrip({ kpis, language }: ExecutiveKpiStripProps) {
     const iconClass = 'w-4 h-4';
     switch (iconName) {
       case 'Boxes':
-        return <Boxes className={`${iconClass} text-awn-primary`} />;
+        return <Boxes className={`${iconClass} text-[#192A22] dark:text-[#BFAB93]`} />;
       case 'CheckCircle2':
         return <CheckCircle2 className={`${iconClass} text-emerald-600 dark:text-emerald-400`} />;
       case 'UserCheck':
         return <UserCheck className={`${iconClass} text-sky-600 dark:text-sky-400`} />;
       case 'Layers':
-        return <Layers className={`${iconClass} text-awn-gold`} />;
+        return <Layers className={`${iconClass} text-[#6A7358] dark:text-[#BFAB93]`} />;
       case 'ShieldCheck':
         return <ShieldCheck className={`${iconClass} text-amber-600 dark:text-amber-400`} />;
       case 'Package':
@@ -36,7 +36,13 @@ export function ExecutiveKpiStrip({ kpis, language }: ExecutiveKpiStripProps) {
     }
   };
 
-  const getIconWrapperBg = (tone?: DashboardKpi['tone']) => {
+  const getIconWrapperBg = (iconName: DashboardKpi['iconName'], tone?: DashboardKpi['tone']) => {
+    if (iconName === 'Boxes') {
+      return 'bg-[#192A22]/10 dark:bg-[#192A22]/40 border-[#192A22]/20 dark:border-[#BFAB93]/30';
+    }
+    if (iconName === 'Layers') {
+      return 'bg-[#6A7358]/10 dark:bg-[#6A7358]/25 border-[#6A7358]/25 dark:border-[#BFAB93]/25';
+    }
     switch (tone) {
       case 'success':
         return 'bg-emerald-500/10 border-emerald-500/20';
@@ -63,6 +69,7 @@ export function ExecutiveKpiStrip({ kpis, language }: ExecutiveKpiStripProps) {
             </span>
             <div
               className={`w-7 h-7 rounded-md border flex items-center justify-center shrink-0 ${getIconWrapperBg(
+                kpi.iconName,
                 kpi.tone
               )}`}
             >

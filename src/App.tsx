@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { ThemeProvider } from './hooks/useTheme.tsx';
 import { ToastProvider } from './hooks/useToast.tsx';
+import { LanguageProvider } from './hooks/useLanguage.tsx';
 import { RouterProvider, useRouter } from './hooks/useRouter.tsx';
 import { AppShell } from './layouts/AppShell.tsx';
 import { MetricStripSkeleton, TableSkeleton } from './components/ui/LoadingState.tsx';
@@ -56,12 +57,14 @@ function ModuleWorkspaceRouter() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <RouterProvider>
-          <ModuleWorkspaceRouter />
-        </RouterProvider>
-      </ToastProvider>
-    </ThemeProvider>
+    <LanguageProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <RouterProvider>
+            <ModuleWorkspaceRouter />
+          </RouterProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }

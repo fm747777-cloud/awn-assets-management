@@ -1,0 +1,15 @@
+export const notificationsAr = {
+  title: 'الإشعارات والتنبيهات',
+  unreadCount: '{count} غير مقروء',
+  allCaughtUp: 'تم الاطلاع على كافة التنبيهات',
+  markAllRead: 'تحديد الكل كمقروء',
+  allTab: 'الكل',
+  unreadTab: 'غير المقروءة',
+  clearAll: 'مسح الكل',
+  noNotifications: 'لا توجد إشعارات',
+  noUnreadNotifications: 'لا توجد إشعارات غير مقروءة',
+  noUnreadDesc: 'تم الاطلاع على كافة تنبيهات الأصول والالتزامات.',
+  noNotificationsDesc: 'تم مسح كافة الإشعارات المسجلة.',
+  viewRequestsQueue: 'عرض جدول الطلبات',
+  auditLog: 'سجل الرقابة',
+};

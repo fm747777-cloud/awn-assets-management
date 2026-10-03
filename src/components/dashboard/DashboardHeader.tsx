@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Calendar,
-  Globe,
   MapPin,
   RefreshCw,
   SlidersHorizontal,
@@ -19,7 +18,7 @@ export interface DashboardHeaderProps {
   onRefresh: () => void;
   isRefreshing: boolean;
   language: 'en' | 'ar';
-  onToggleLanguage: () => void;
+  onToggleLanguage?: () => void;
   lastUpdated?: string;
 }
 
@@ -29,7 +28,6 @@ export function DashboardHeader({
   onRefresh,
   isRefreshing,
   language,
-  onToggleLanguage,
   lastUpdated,
 }: DashboardHeaderProps) {
   const isAr = language === 'ar';
@@ -42,7 +40,7 @@ export function DashboardHeader({
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-awn-text-primary">
             {isAr ? 'نظرة عامة على الأصول' : 'Assets Overview'}
           </h1>
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-awn-primary-soft text-awn-primary border border-awn-border">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#192A22]/10 text-[#192A22] dark:bg-[#BFAB93]/15 dark:text-[#BFAB93] border border-[#192A22]/20 dark:border-[#BFAB93]/30">
             {isAr ? 'مركز قيادة الأصول' : 'Asset Command Center'}
           </span>
         </div>
@@ -150,18 +148,6 @@ export function DashboardHeader({
           </div>
         </div>
 
-        {/* Language Toggle (EN / العربية) */}
-        <button
-          type="button"
-          onClick={onToggleLanguage}
-          title={isAr ? 'التبديل إلى الإنجليزية' : 'Switch to Arabic'}
-          aria-label={isAr ? 'التبديل إلى الإنجليزية' : 'Switch to Arabic'}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-awn-surface border border-awn-border text-xs font-medium text-awn-text-secondary hover:text-awn-text-primary hover:bg-awn-surface-alt transition-colors cursor-pointer"
-        >
-          <Globe className="w-3.5 h-3.5 text-awn-gold shrink-0" />
-          <span>{isAr ? 'English' : 'العربية'}</span>
-        </button>
-
         {/* Refresh Action */}
         <button
           type="button"
@@ -178,7 +164,7 @@ export function DashboardHeader({
           className="p-1.5 rounded-md bg-awn-surface border border-awn-border text-awn-text-secondary hover:text-awn-text-primary hover:bg-awn-surface-alt transition-colors cursor-pointer disabled:opacity-50"
         >
           <RefreshCw
-            className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-awn-primary' : ''}`}
+            className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#192A22] dark:text-[#BFAB93]' : ''}`}
           />
         </button>
       </div>

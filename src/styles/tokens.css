@@ -77,3 +77,18 @@
   --awn-sidebar-muted: #879390;
   --awn-sidebar-border: #2B3836;
 }
+
+/* Dashboard-scoped tokens (harmonized warm neutrals for chart tracks and surfaces in light mode) */
+.dashboard-workspace {
+  --awn-surface-alt: #EAE7DF;
+  --awn-border: #E0DDD4;
+  --awn-border-strong: #CDC7B9;
+}
+
+.dark .dashboard-workspace,
+[data-theme="dark"] .dashboard-workspace {
+  --awn-surface-alt: #1D2928;
+  --awn-border: #2B3836;
+  --awn-border-strong: #3B4C49;
+}
+

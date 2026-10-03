@@ -161,8 +161,8 @@ export function AssetDistributionChart({
                     {item.count.toLocaleString()}
                   </span>
                   <span
-                    className={`font-medium w-10 text-right ${
-                      isHovered ? 'text-awn-primary font-bold' : 'text-awn-text-primary'
+                    className={`font-mono tabular-nums w-10 text-right ${
+                      isHovered ? 'text-awn-text-primary font-bold' : 'text-awn-text-secondary font-medium'
                     }`}
                   >
                     {item.percentage.toFixed(1)}%

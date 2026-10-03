@@ -45,7 +45,7 @@ export function AssetAlertsSection({
           <button
             type="button"
             onClick={onResetAlerts}
-            className="text-xs text-awn-text-muted hover:text-awn-primary transition-colors cursor-pointer"
+            className="text-xs text-awn-text-muted hover:text-[#192A22] dark:hover:text-[#BFAB93] transition-colors cursor-pointer"
           >
             {isAr ? 'إعادة ضبط التنبيهات' : 'Reset Alerts'}
           </button>
@@ -91,7 +91,7 @@ export function AssetAlertsSection({
                       {isWarning ? (
                         <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                       ) : (
-                        <Info className="w-4 h-4 text-awn-primary shrink-0" />
+                        <Info className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
                       )}
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-awn-text-muted">
                         {alert.urgency === 'high'
@@ -119,7 +119,7 @@ export function AssetAlertsSection({
                   <h3 className="text-xs font-semibold text-awn-text-primary leading-snug">
                     {isAr ? alert.titleAr : alert.title}
                   </h3>
-                  <div className="text-[11px] font-mono font-medium text-awn-primary mt-0.5 truncate">
+                  <div className="text-[11px] font-mono font-medium text-[#192A22] dark:text-[#BFAB93] mt-0.5 truncate">
                     {alert.targetRef}
                   </div>
 
@@ -137,10 +137,10 @@ export function AssetAlertsSection({
                   <button
                     type="button"
                     onClick={() => onNavigate(alert.actionPath)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-awn-surface border border-awn-border hover:bg-awn-surface-alt hover:text-awn-primary text-awn-text-primary transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-awn-surface border border-awn-border hover:bg-awn-surface-alt hover:text-[#192A22] dark:hover:text-[#BFAB93] text-awn-text-primary transition-colors cursor-pointer"
                   >
                     <span>{isAr ? alert.actionLabelAr : alert.actionLabel}</span>
-                    <ArrowUpRight className="w-3 h-3 text-awn-primary" />
+                    <ArrowUpRight className="w-3 h-3 text-[#192A22] dark:text-[#BFAB93]" />
                   </button>
                 </div>
               </div>

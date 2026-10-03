@@ -7,6 +7,11 @@ import type {
   LocationDistributionItem,
   RecentActivityItem,
 } from '../types/dashboard.ts';
+import {
+  DASHBOARD_CATEGORY_COLORS,
+  DASHBOARD_LOCATION_COLORS,
+  DASHBOARD_STATUS_COLORS,
+} from '../constants/dashboardPalette.ts';
 
 const BASE_KPIS: DashboardKpi[] = [
   {
@@ -84,7 +89,7 @@ const BASE_DISTRIBUTION: CategoryDistributionItem[] = [
     nameAr: 'معدات تقنية المعلومات',
     count: 3120,
     percentage: 38.3,
-    color: '#145B5F', // AWN primary teal
+    color: DASHBOARD_CATEGORY_COLORS['cat-it'],
   },
   {
     id: 'cat-elec',
@@ -92,7 +97,7 @@ const BASE_DISTRIBUTION: CategoryDistributionItem[] = [
     nameAr: 'الأجهزة والإلكترونيات',
     count: 2180,
     percentage: 26.7,
-    color: '#20767C', // Secondary deep cyan
+    color: DASHBOARD_CATEGORY_COLORS['cat-elec'],
   },
   {
     id: 'cat-veh',
@@ -100,7 +105,7 @@ const BASE_DISTRIBUTION: CategoryDistributionItem[] = [
     nameAr: 'المركبات والأسطول',
     count: 1240,
     percentage: 15.2,
-    color: '#B89A5A', // AWN Gold
+    color: DASHBOARD_CATEGORY_COLORS['cat-veh'],
   },
   {
     id: 'cat-furn',
@@ -108,7 +113,7 @@ const BASE_DISTRIBUTION: CategoryDistributionItem[] = [
     nameAr: 'الأثاث المكتبي',
     count: 950,
     percentage: 11.7,
-    color: '#4A8B8F', // Soft sage teal
+    color: DASHBOARD_CATEGORY_COLORS['cat-furn'],
   },
   {
     id: 'cat-fac',
@@ -116,7 +121,7 @@ const BASE_DISTRIBUTION: CategoryDistributionItem[] = [
     nameAr: 'العقارات والمرافق',
     count: 660,
     percentage: 8.1,
-    color: '#8FAEB0', // Muted slate teal
+    color: DASHBOARD_CATEGORY_COLORS['cat-fac'],
   },
 ];
 
@@ -129,7 +134,7 @@ const BASE_LOCATIONS: LocationDistributionItem[] = [
     subLocationAr: 'المدينة الرقمية وأبراج العليا',
     count: 4480,
     percentage: 55.0,
-    colorHex: '#145B5F',
+    colorHex: DASHBOARD_LOCATION_COLORS['loc-ruh'],
   },
   {
     id: 'loc-jed',
@@ -139,7 +144,7 @@ const BASE_LOCATIONS: LocationDistributionItem[] = [
     subLocationAr: 'حي الشاطئ والواجهة البحرية',
     count: 1875,
     percentage: 23.0,
-    colorHex: '#20767C',
+    colorHex: DASHBOARD_LOCATION_COLORS['loc-jed'],
   },
   {
     id: 'loc-dmm',
@@ -149,7 +154,7 @@ const BASE_LOCATIONS: LocationDistributionItem[] = [
     subLocationAr: 'المنطقة الصناعية الشرقية',
     count: 1304,
     percentage: 16.0,
-    colorHex: '#4A8B8F',
+    colorHex: DASHBOARD_LOCATION_COLORS['loc-dmm'],
   },
   {
     id: 'loc-oth',
@@ -159,7 +164,7 @@ const BASE_LOCATIONS: LocationDistributionItem[] = [
     subLocationAr: 'مستودعات سحابية ومواقع ميدانية',
     count: 491,
     percentage: 6.0,
-    colorHex: '#B89A5A',
+    colorHex: DASHBOARD_LOCATION_COLORS['loc-oth'],
   },
 ];
 
@@ -333,10 +338,10 @@ class DashboardService {
         return kpi;
       });
       distribution = [
-        { id: 'cat-veh', name: 'Vehicles & Fleet', nameAr: 'المركبات والأسطول', count: 1240, percentage: 38.0, color: '#B89A5A' },
-        { id: 'cat-it', name: 'Critical IT Infrastructure', nameAr: 'البنية التحتية الحرجة', count: 1120, percentage: 34.4, color: '#145B5F' },
-        { id: 'cat-fac', name: 'Regulated Facilities', nameAr: 'المرافق الخاضعة للوائح', count: 660, percentage: 20.2, color: '#4A8B8F' },
-        { id: 'cat-elec', name: 'Safety Monitoring Hardware', nameAr: 'أجهزة المراقبة والسلامة', count: 240, percentage: 7.4, color: '#20767C' },
+        { id: 'cat-veh', name: 'Vehicles & Fleet', nameAr: 'المركبات والأسطول', count: 1240, percentage: 38.0, color: DASHBOARD_CATEGORY_COLORS['cat-veh'] },
+        { id: 'cat-it', name: 'Critical IT Infrastructure', nameAr: 'البنية التحتية الحرجة', count: 1120, percentage: 34.4, color: DASHBOARD_CATEGORY_COLORS['cat-it'] },
+        { id: 'cat-fac', name: 'Regulated Facilities', nameAr: 'المرافق الخاضعة للوائح', count: 660, percentage: 20.2, color: DASHBOARD_CATEGORY_COLORS['cat-fac'] },
+        { id: 'cat-elec', name: 'Safety Monitoring Hardware', nameAr: 'أجهزة المراقبة والسلامة', count: 240, percentage: 7.4, color: DASHBOARD_CATEGORY_COLORS['cat-elec'] },
       ];
     } else if (filters.scope === 'NON_COMPLIANCE') {
       kpis = kpis.map((kpi) => {
@@ -355,9 +360,9 @@ class DashboardService {
         return kpi;
       });
       distribution = [
-        { id: 'cat-it', name: 'Laptops & Workstations', nameAr: 'أجهزة الحاسوب والمحمول', count: 2000, percentage: 40.9, color: '#145B5F' },
-        { id: 'cat-elec', name: 'Monitors & Peripherals', nameAr: 'الشاشات والملحقات', count: 1940, percentage: 39.7, color: '#20767C' },
-        { id: 'cat-furn', name: 'Workstation Furniture', nameAr: 'أثاث المكاتب والمحطات', count: 950, percentage: 19.4, color: '#4A8B8F' },
+        { id: 'cat-it', name: 'Laptops & Workstations', nameAr: 'أجهزة الحاسوب والمحمول', count: 2000, percentage: 40.9, color: DASHBOARD_CATEGORY_COLORS['cat-it'] },
+        { id: 'cat-elec', name: 'Monitors & Peripherals', nameAr: 'الشاشات والملحقات', count: 1940, percentage: 39.7, color: DASHBOARD_CATEGORY_COLORS['cat-elec'] },
+        { id: 'cat-furn', name: 'Workstation Furniture', nameAr: 'أثاث المكاتب والمحطات', count: 950, percentage: 19.4, color: DASHBOARD_CATEGORY_COLORS['cat-furn'] },
       ];
     }
 
@@ -405,11 +410,11 @@ class DashboardService {
     };
 
     const statuses = [
-      { id: 'st-active', status: 'Active', statusAr: 'نشط', count: 6380, percentage: 78.3, tone: 'success' as const, colorHex: '#16A34A' },
-      { id: 'st-assigned', status: 'Assigned', statusAr: 'مخصص بالعهدة', count: 4972, percentage: 61.0, tone: 'info' as const, colorHex: '#20767C' },
-      { id: 'st-available', status: 'Available', statusAr: 'متاح بالمستودع', count: 1467, percentage: 18.0, tone: 'neutral' as const, colorHex: '#B89A5A' },
-      { id: 'st-retired', status: 'Retired', statusAr: 'متقاعد / تالف', count: 408, percentage: 5.0, tone: 'muted' as const, colorHex: '#98A2B3' },
-      { id: 'st-draft', status: 'Draft / Intake', statusAr: 'مسودة / وارد جديد', count: 163, percentage: 2.0, tone: 'warning' as const, colorHex: '#D97706' },
+      { id: 'st-active', status: 'Active', statusAr: 'نشط', count: 6380, percentage: 78.3, tone: 'success' as const, colorHex: DASHBOARD_STATUS_COLORS['st-active'] },
+      { id: 'st-assigned', status: 'Assigned', statusAr: 'مخصص بالعهدة', count: 4972, percentage: 61.0, tone: 'info' as const, colorHex: DASHBOARD_STATUS_COLORS['st-assigned'] },
+      { id: 'st-available', status: 'Available', statusAr: 'متاح بالمستودع', count: 1467, percentage: 18.0, tone: 'neutral' as const, colorHex: DASHBOARD_STATUS_COLORS['st-available'] },
+      { id: 'st-retired', status: 'Retired', statusAr: 'متقاعد / تالف', count: 408, percentage: 5.0, tone: 'muted' as const, colorHex: DASHBOARD_STATUS_COLORS['st-retired'] },
+      { id: 'st-draft', status: 'Draft / Intake', statusAr: 'مسودة / وارد جديد', count: 163, percentage: 2.0, tone: 'warning' as const, colorHex: DASHBOARD_STATUS_COLORS['st-draft'] },
     ];
 
     return {
