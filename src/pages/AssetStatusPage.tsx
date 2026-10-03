@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { assetModuleService } from '../services/assetModuleService.ts';
 import { useToast } from '../hooks/useToast.tsx';
+import { useLanguage } from '../hooks/useLanguage.tsx';
 import { PageHeader } from '../components/ui/PageHeader.tsx';
 import { Button } from '../components/ui/Button.tsx';
 import { Input, Textarea } from '../components/ui/Input.tsx';
@@ -37,8 +38,52 @@ const LANGUAGE_OPTIONS: SelectOption[] = [
   { value: 'Bilingual (EN / AR)', label: 'Bilingual (EN / AR)' },
 ];
 
+const DEFAULT_STATUS_DESCRIPTIONS_AR: Record<string, string> = {
+  Pending:
+    'تشير هذه الحالة إلى أن الطلب تم تقديمه بنجاح وهو بانتظار المراجعة أو الاعتماد. لم يتم اتخاذ أي إجراء بعد، والطلب حالياً في قائمة الانتظار للمعالجة كأول مرحلة في مسار الطلب.',
+  Completed:
+    'تشير هذه الحالة إلى أن إجراء دورة حياة الأصل أو الطلب قد تم تنفيذه بالكامل والتحقق منه رسمياً.',
+  Inprogress:
+    'تشير هذه الحالة إلى أن الطلب قيد المعالجة الفنية أو الإدارية النشطة حالياً.',
+  Rejected:
+    'تشير هذه الحالة إلى أن الطلب أو إجراء الأصل تم رفضه رسمياً ولم تتم الموافقة عليه.',
+  Todo:
+    'تشير هذه الحالة إلى مهمة أو إجراء مستحق قيد المتابعة ولم يبدأ العمل عليه بعد.',
+};
+
 export default function AssetStatusPage() {
   const { showToast } = useToast();
+  const { isRtl, formatNumber, t } = useLanguage();
+
+  const getLocalizedStatusName = useCallback(
+    (name: string) => {
+      if (!isRtl) return name;
+      const map: Record<string, string> = {
+        Pending: t('assetStatus.pending'),
+        Completed: t('assetStatus.completed'),
+        Inprogress: t('assetStatus.inprogress'),
+        'In Progress': t('assetStatus.inprogress'),
+        Rejected: t('assetStatus.rejected'),
+        Todo: t('assetStatus.todo'),
+        Active: t('assetStatus.active'),
+        Deactivated: t('assetStatus.deactivated'),
+      };
+      return map[name] || name;
+    },
+    [isRtl, t]
+  );
+
+  const getLocalizedDescription = useCallback(
+    (status: AssetStatus) => {
+      if (!isRtl) return status.description || t('assetStatus.noDescription');
+      return (
+        DEFAULT_STATUS_DESCRIPTIONS_AR[status.statusName] ||
+        status.description ||
+        t('assetStatus.noDescription')
+      );
+    },
+    [isRtl, t]
+  );
 
   // Table & Query State
   const [loading, setLoading] = useState(true);
@@ -280,27 +325,33 @@ export default function AssetStatusPage() {
     <div className="space-y-5">
       {/* Page Header with exact Title, Description, and Actions ("Export CSV", "New Status") */}
       <PageHeader
-        title="Asset Status"
-        description="Manage and update all your assets in one place."
+        title={t('assetStatus.title')}
+        description={t('assetStatus.description')}
         contextMeta={
           <div className="flex flex-wrap items-center gap-2 text-xs text-awn-text-secondary tabular-nums">
             <span className="inline-flex items-center gap-1.5 font-semibold text-awn-text-primary">
               <Activity className="w-3.5 h-3.5 text-awn-primary" aria-hidden="true" />
-              <span>{statusesData.summaryTotalLabel}</span>
+              <span>
+                {isRtl
+                  ? t('assetStatus.summaryLabel', {
+                      count: formatNumber(statusesData.totalRecordsCount),
+                    })
+                  : statusesData.summaryTotalLabel}
+              </span>
             </span>
             <span aria-hidden="true">·</span>
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {statusesData.activeCount}
+                {formatNumber(statusesData.activeCount)}
               </strong>{' '}
-              Active
+              {t('assetStatus.active')}
             </span>
             <span aria-hidden="true">·</span>
             <span>
               <strong className="font-semibold text-awn-text-primary">
-                {statusesData.deactivatedCount}
+                {formatNumber(statusesData.deactivatedCount)}
               </strong>{' '}
-              Deactivated
+              {t('assetStatus.deactivated')}
             </span>
           </div>
         }
@@ -311,7 +362,7 @@ export default function AssetStatusPage() {
             leftIcon={<Download className="w-4 h-4" />}
             onClick={handleExportCsv}
           >
-            Export CSV
+            {t('assetStatus.exportCsv')}
           </Button>
         }
         primaryAction={
@@ -321,7 +372,7 @@ export default function AssetStatusPage() {
             leftIcon={<Plus className="w-4 h-4" />}
             onClick={handleOpenCreateModal}
           >
-            New Status
+            {t('assetStatus.newStatus')}
           </Button>
         }
       />
@@ -332,18 +383,22 @@ export default function AssetStatusPage() {
         <div className="p-4 border-b border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="Search by Status Code, Tags Name, Author, Email..."
+              placeholder={t('assetStatus.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onClear={() => setSearchQuery('')}
               leftIcon={<Search className="w-4 h-4" />}
-              aria-label="Search asset status"
+              aria-label={t('assetStatus.searchAria')}
             />
           </div>
 
           <div className="flex items-center gap-2 text-xs text-awn-text-secondary">
             <span className="px-2.5 py-1 rounded-md bg-awn-surface-alt border border-awn-border font-semibold text-awn-text-primary tabular-nums">
-              {statusesData.summaryTotalLabel}
+              {isRtl
+                ? t('assetStatus.summaryLabel', {
+                    count: formatNumber(statusesData.totalRecordsCount),
+                  })
+                : statusesData.summaryTotalLabel}
             </span>
           </div>
         </div>
@@ -353,13 +408,15 @@ export default function AssetStatusPage() {
           <TableSkeleton rows={5} columns={6} />
         ) : statusesData.items.length === 0 ? (
           <EmptyState
-            title="No Asset Statuses Found"
+            title={t('assetStatus.noStatusFound')}
             description={
               searchQuery
-                ? `No asset status matched "${searchQuery}". Try clearing your search query.`
-                : 'No asset statuses are currently registered. Click "New Status" to create your first status.'
+                ? t('assetStatus.noStatusSearchDesc', { query: searchQuery })
+                : t('assetStatus.noStatusDesc')
             }
-            primaryActionLabel={searchQuery ? 'Clear Search' : 'New Status'}
+            primaryActionLabel={
+              searchQuery ? t('assetStatus.clearSearch') : t('assetStatus.newStatus')
+            }
             onPrimaryAction={
               searchQuery ? () => setSearchQuery('') : handleOpenCreateModal
             }
@@ -367,22 +424,35 @@ export default function AssetStatusPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left rtl:text-right border-collapse">
                 <thead>
                   <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                    <th className="py-3 px-4 whitespace-nowrap">Status Code</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Tags Name</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Author/Creator</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Created Date</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Status</th>
-                    <th className="py-3 px-4 whitespace-nowrap text-right">
-                      Actions
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {t('assetStatus.colStatusCode')}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {t('assetStatus.colTagsName')}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {t('assetStatus.colAuthorCreator')}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {t('assetStatus.colCreatedDate')}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap">
+                      {t('assetStatus.colStatus')}
+                    </th>
+                    <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
+                      {t('assetStatus.colActions')}
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-awn-border text-sm">
                   {statusesData.items.map((assetStatus) => {
                     const isActive = assetStatus.status === 'Active';
+                    const localizedStatusName = getLocalizedStatusName(
+                      assetStatus.statusName
+                    );
                     return (
                       <tr
                         key={assetStatus.statusCode}
@@ -404,9 +474,9 @@ export default function AssetStatusPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenStatusDetails(assetStatus)}
-                            className="font-medium text-awn-text-primary hover:text-awn-primary text-left transition-colors cursor-pointer"
+                            className="font-medium text-awn-text-primary hover:text-awn-primary text-left rtl:text-right transition-colors cursor-pointer"
                           >
-                            {assetStatus.statusName}
+                            {localizedStatusName}
                           </button>
                         </td>
 
@@ -436,13 +506,21 @@ export default function AssetStatusPage() {
                         </td>
 
                         {/* Row Actions */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right">
+                        <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right rtl:text-left">
                           <div className="inline-flex items-center justify-end gap-1">
                             <button
                               type="button"
                               onClick={() => handleOpenStatusDetails(assetStatus)}
-                              title={`View ${assetStatus.statusName}`}
-                              aria-label={`View ${assetStatus.statusName}`}
+                              title={
+                                isRtl
+                                  ? `عرض ${localizedStatusName}`
+                                  : `View ${assetStatus.statusName}`
+                              }
+                              aria-label={
+                                isRtl
+                                  ? `عرض ${localizedStatusName}`
+                                  : `View ${assetStatus.statusName}`
+                              }
                               className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
                             >
                               <Eye className="w-4 h-4" />
@@ -450,8 +528,16 @@ export default function AssetStatusPage() {
                             <button
                               type="button"
                               onClick={() => handleOpenEditModal(assetStatus)}
-                              title={`Edit ${assetStatus.statusName}`}
-                              aria-label={`Edit ${assetStatus.statusName}`}
+                              title={
+                                isRtl
+                                  ? `تعديل ${localizedStatusName}`
+                                  : `Edit ${assetStatus.statusName}`
+                              }
+                              aria-label={
+                                isRtl
+                                  ? `تعديل ${localizedStatusName}`
+                                  : `Edit ${assetStatus.statusName}`
+                              }
                               className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
                             >
                               <Pencil className="w-4 h-4" />
@@ -460,8 +546,16 @@ export default function AssetStatusPage() {
                               <button
                                 type="button"
                                 onClick={() => setDeactivateTarget(assetStatus)}
-                                title={`Delete Request Status (${assetStatus.statusName})`}
-                                aria-label={`Delete Request Status (${assetStatus.statusName})`}
+                                title={
+                                  isRtl
+                                    ? `حذف طلب الحالة (${localizedStatusName})`
+                                    : `Delete Request Status (${assetStatus.statusName})`
+                                }
+                                aria-label={
+                                  isRtl
+                                    ? `حذف طلب الحالة (${localizedStatusName})`
+                                    : `Delete Request Status (${assetStatus.statusName})`
+                                }
                                 className="p-1.5 rounded text-awn-text-secondary hover:text-awn-warning hover:bg-awn-warning-soft transition-colors cursor-pointer"
                               >
                                 <Ban className="w-4 h-4" />
@@ -470,8 +564,16 @@ export default function AssetStatusPage() {
                             <button
                               type="button"
                               onClick={() => setDeleteTarget(assetStatus)}
-                              title={`Delete ${assetStatus.statusName}`}
-                              aria-label={`Delete ${assetStatus.statusName}`}
+                              title={
+                                isRtl
+                                  ? `حذف ${localizedStatusName}`
+                                  : `Delete ${assetStatus.statusName}`
+                              }
+                              aria-label={
+                                isRtl
+                                  ? `حذف ${localizedStatusName}`
+                                  : `Delete ${assetStatus.statusName}`
+                              }
                               className="p-1.5 rounded text-awn-text-secondary hover:text-awn-error hover:bg-awn-error-soft transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -488,17 +590,21 @@ export default function AssetStatusPage() {
             {/* Pagination Footer */}
             <div className="px-4 py-3 border-t border-awn-border bg-awn-surface flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-awn-text-secondary">
               <div className="tabular-nums">
-                Showing{' '}
+                {t('assetStatus.showing')}{' '}
                 <strong className="font-semibold text-awn-text-primary">
-                  {statusesData.items.length}
+                  {formatNumber(statusesData.items.length)}
                 </strong>{' '}
-                of{' '}
+                {t('assetStatus.of')}{' '}
                 <strong className="font-semibold text-awn-text-primary">
-                  {statusesData.pagination.totalItems}
+                  {formatNumber(statusesData.pagination.totalItems)}
                 </strong>{' '}
-                displayed records ·{' '}
+                {t('assetStatus.displayedRecords')} ·{' '}
                 <strong className="font-semibold text-awn-text-primary">
-                  {statusesData.summaryTotalLabel}
+                  {isRtl
+                    ? t('assetStatus.summaryLabel', {
+                        count: formatNumber(statusesData.totalRecordsCount),
+                      })
+                    : statusesData.summaryTotalLabel}
                 </strong>
               </div>
 
@@ -508,21 +614,35 @@ export default function AssetStatusPage() {
                   size="sm"
                   disabled={currentPage <= 1}
                   onClick={() => fetchStatuses(currentPage - 1)}
-                  leftIcon={<ChevronLeft className="w-3.5 h-3.5" />}
+                  leftIcon={
+                    isRtl ? (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    )
+                  }
                 >
-                  Previous
+                  {t('assetStatus.previous')}
                 </Button>
                 <span className="px-2.5 py-1 font-mono text-xs text-awn-text-primary tabular-nums">
-                  Page {currentPage} of {statusesData.pagination.totalPages}
+                  {t('assetStatus.page')} {formatNumber(currentPage)}{' '}
+                  {t('assetStatus.of')}{' '}
+                  {formatNumber(statusesData.pagination.totalPages)}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={currentPage >= statusesData.pagination.totalPages}
                   onClick={() => fetchStatuses(currentPage + 1)}
-                  rightIcon={<ChevronRight className="w-3.5 h-3.5" />}
+                  rightIcon={
+                    isRtl ? (
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    )
+                  }
                 >
-                  Next
+                  {t('assetStatus.next')}
                 </Button>
               </div>
             </div>
@@ -538,10 +658,12 @@ export default function AssetStatusPage() {
         onClose={() => setDetailsOpen(false)}
         title={
           selectedStatus
-            ? `${selectedStatus.statusCode} · ${selectedStatus.statusName}`
-            : 'View & Edit Status'
+            ? `${selectedStatus.statusCode} · ${getLocalizedStatusName(
+                selectedStatus.statusName
+              )}`
+            : t('assetStatus.viewEditStatus')
         }
-        subtitle="Master · Asset Status Specification"
+        subtitle={t('assetStatus.statusSpec')}
         size="lg"
         footer={
           selectedStatus ? (
@@ -554,7 +676,7 @@ export default function AssetStatusPage() {
                     leftIcon={<Ban className="w-3.5 h-3.5" />}
                     onClick={() => setDeactivateTarget(selectedStatus)}
                   >
-                    Delete Request Status
+                    {t('assetStatus.deleteRequestStatus')}
                   </Button>
                 )}
                 <Button
@@ -563,7 +685,7 @@ export default function AssetStatusPage() {
                   leftIcon={<Trash2 className="w-3.5 h-3.5" />}
                   onClick={() => setDeleteTarget(selectedStatus)}
                 >
-                  Delete Status
+                  {t('assetStatus.deleteStatus')}
                 </Button>
               </div>
               <div className="flex items-center gap-2">
@@ -572,7 +694,7 @@ export default function AssetStatusPage() {
                   size="sm"
                   onClick={() => setDetailsOpen(false)}
                 >
-                  Close
+                  {t('assetStatus.close')}
                 </Button>
                 <Button
                   variant="primary"
@@ -580,7 +702,7 @@ export default function AssetStatusPage() {
                   leftIcon={<Pencil className="w-3.5 h-3.5" />}
                   onClick={() => handleOpenEditModal(selectedStatus)}
                 >
-                  Edit Status
+                  {t('assetStatus.editStatus')}
                 </Button>
               </div>
             </div>
@@ -596,10 +718,10 @@ export default function AssetStatusPage() {
                   {selectedStatus.statusCode}
                 </div>
                 <div className="text-base font-semibold text-awn-text-primary mt-0.5">
-                  {selectedStatus.statusName}
+                  {getLocalizedStatusName(selectedStatus.statusName)}
                 </div>
                 <div className="text-xs text-awn-text-secondary mt-1">
-                  Created Date: {selectedStatus.createdDate}
+                  {t('assetStatus.createdDate')}: {selectedStatus.createdDate}
                 </div>
               </div>
               <StatusBadge
@@ -611,29 +733,37 @@ export default function AssetStatusPage() {
             {/* Status Details Attributes */}
             <div className="space-y-3">
               <h4 className="text-xs font-semibold text-awn-text-primary">
-                Status Details
+                {t('assetStatus.statusDetails')}
               </h4>
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div className="p-3.5 rounded-md border border-awn-border">
-                  <dt className="text-awn-text-muted">Status Code</dt>
+                  <dt className="text-awn-text-muted">
+                    {t('assetStatus.statusCode')}
+                  </dt>
                   <dd className="font-mono font-semibold text-awn-text-primary mt-1 tabular-nums">
                     {selectedStatus.statusCode}
                   </dd>
                 </div>
                 <div className="p-3.5 rounded-md border border-awn-border">
-                  <dt className="text-awn-text-muted">Tags Name</dt>
+                  <dt className="text-awn-text-muted">
+                    {t('assetStatus.tagsName')}
+                  </dt>
                   <dd className="font-semibold text-awn-text-primary mt-1">
-                    {selectedStatus.statusName}
+                    {getLocalizedStatusName(selectedStatus.statusName)}
                   </dd>
                 </div>
                 <div className="p-3.5 rounded-md border border-awn-border">
-                  <dt className="text-awn-text-muted">Language</dt>
+                  <dt className="text-awn-text-muted">
+                    {t('assetStatus.language')}
+                  </dt>
                   <dd className="font-medium text-awn-text-primary mt-1">
                     {selectedStatus.language || 'English'}
                   </dd>
                 </div>
                 <div className="p-3.5 rounded-md border border-awn-border">
-                  <dt className="text-awn-text-muted">Status</dt>
+                  <dt className="text-awn-text-muted">
+                    {t('assetStatus.colStatus')}
+                  </dt>
                   <dd className="mt-1">
                     <StatusBadge
                       label={selectedStatus.status}
@@ -642,27 +772,35 @@ export default function AssetStatusPage() {
                   </dd>
                 </div>
                 <div className="p-3.5 rounded-md border border-awn-border">
-                  <dt className="text-awn-text-muted">Author/Creator</dt>
+                  <dt className="text-awn-text-muted">
+                    {t('assetStatus.authorCreator')}
+                  </dt>
                   <dd className="font-medium text-awn-text-primary mt-1">
                     {selectedStatus.authorName}
                   </dd>
                 </div>
                 <div className="p-3.5 rounded-md border border-awn-border">
-                  <dt className="text-awn-text-muted">Email</dt>
+                  <dt className="text-awn-text-muted">
+                    {t('assetStatus.email')}
+                  </dt>
                   <dd className="font-mono text-awn-text-primary mt-1 break-all">
                     {selectedStatus.authorEmail}
                   </dd>
                 </div>
                 <div className="p-3.5 rounded-md border border-awn-border">
-                  <dt className="text-awn-text-muted">Created Date</dt>
+                  <dt className="text-awn-text-muted">
+                    {t('assetStatus.createdDate')}
+                  </dt>
                   <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                     {selectedStatus.createdDate}
                   </dd>
                 </div>
                 <div className="sm:col-span-2 p-3.5 rounded-md border border-awn-border bg-awn-surface-alt">
-                  <dt className="text-awn-text-muted">Description</dt>
+                  <dt className="text-awn-text-muted">
+                    {t('assetStatus.descriptionLabel')}
+                  </dt>
                   <dd className="font-medium text-awn-text-primary mt-1 leading-relaxed">
-                    {selectedStatus.description || 'No description provided.'}
+                    {getLocalizedDescription(selectedStatus)}
                   </dd>
                 </div>
               </dl>
@@ -678,12 +816,14 @@ export default function AssetStatusPage() {
         isOpen={formModalOpen}
         onClose={() => setFormModalOpen(false)}
         title={
-          formMode === 'create' ? 'Create New Status' : 'Edit Status'
+          formMode === 'create'
+            ? t('assetStatus.createNewStatus')
+            : t('assetStatus.editStatus')
         }
         description={
           formMode === 'create'
-            ? 'Define a new master asset status. Status Code is autogenerated by the system.'
-            : `Update the name and description for status ${formData.statusCode}.`
+            ? t('assetStatus.createDesc')
+            : t('assetStatus.editDesc', { code: formData.statusCode })
         }
         size="md"
         footer={
@@ -694,14 +834,14 @@ export default function AssetStatusPage() {
                 onClick={() => setFormModalOpen(false)}
                 disabled={submitting}
               >
-                Cancel
+                {t('assetStatus.cancel')}
               </Button>
               <Button
                 variant="primary"
                 onClick={handleFormSubmit}
                 loading={submitting}
               >
-                Submit
+                {t('assetStatus.submit')}
               </Button>
             </>
           ) : (
@@ -711,14 +851,14 @@ export default function AssetStatusPage() {
                 onClick={() => setFormModalOpen(false)}
                 disabled={submitting}
               >
-                Discard Changes
+                {t('assetStatus.discardChanges')}
               </Button>
               <Button
                 variant="primary"
                 onClick={handleFormSubmit}
                 loading={submitting}
               >
-                Save & Update
+                {t('assetStatus.saveAndUpdate')}
               </Button>
             </>
           )
@@ -726,21 +866,29 @@ export default function AssetStatusPage() {
       >
         <form onSubmit={handleFormSubmit} noValidate>
           <FormSection
-            title="Status Information"
-            description="Enter the status details below."
+            title={t('assetStatus.statusInfo')}
+            description={t('assetStatus.statusInfoDesc')}
             columns={1}
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
-                label="Status Code"
+                label={t('assetStatus.statusCode')}
                 value={formData.statusCode}
                 disabled
                 readOnly
-                description="Autogenerated"
+                description={t('assetStatus.autogenerated')}
               />
               <Select
-                label="Language"
-                options={LANGUAGE_OPTIONS}
+                label={t('assetStatus.language')}
+                options={
+                  isRtl
+                    ? [
+                        { value: 'English', label: 'الإنجليزية' },
+                        { value: 'Arabic (العربية)', label: 'العربية' },
+                        { value: 'Bilingual (EN / AR)', label: 'ثنائي اللغة (EN / AR)' },
+                      ]
+                    : LANGUAGE_OPTIONS
+                }
                 value={formData.language}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, language: e.target.value }))
@@ -750,9 +898,9 @@ export default function AssetStatusPage() {
 
             {/* Preserving exact visible wording: Status Name * with placeholder Enter Tag Name */}
             <Input
-              label="Status Name *"
+              label={t('assetStatus.statusNameRequired')}
               required
-              placeholder="Enter Tag Name"
+              placeholder={t('assetStatus.statusNamePlaceholder')}
               value={formData.statusName}
               onChange={(e) => {
                 const val = e.target.value;
@@ -765,13 +913,17 @@ export default function AssetStatusPage() {
                   });
                 }
               }}
-              error={formErrors.statusName}
+              error={
+                formErrors.statusName
+                  ? t('assetStatus.nameRequired')
+                  : undefined
+              }
             />
 
             <Textarea
-              label="Description"
+              label={t('assetStatus.descriptionLabel')}
               rows={3}
-              placeholder="Enter status description..."
+              placeholder={t('assetStatus.descPlaceholder')}
               value={formData.description}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, description: e.target.value }))
@@ -788,14 +940,17 @@ export default function AssetStatusPage() {
         isOpen={Boolean(deactivateTarget)}
         onClose={() => setDeactivateTarget(null)}
         onConfirm={handleConfirmDeactivate}
-        title="Deactivate Status"
-        description="Confirming this action will change the asset status from Active to Deactivated. The status record will remain preserved in the master dataset."
+        title={t('assetStatus.deactivateTitle')}
+        description={t('assetStatus.deactivateDesc')}
         itemSummary={
           deactivateTarget
-            ? `${deactivateTarget.statusCode} — ${deactivateTarget.statusName}`
+            ? `${deactivateTarget.statusCode} — ${getLocalizedStatusName(
+                deactivateTarget.statusName
+              )}`
             : ''
         }
-        confirmLabel="Delete Request Status"
+        confirmLabel={t('assetStatus.confirmDeactivate')}
+        cancelLabel={t('assetStatus.cancel')}
         loading={submitting}
       />
 
@@ -806,14 +961,17 @@ export default function AssetStatusPage() {
         isOpen={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleConfirmDelete}
-        title="Delete Status"
-        description="Are you sure you want to delete this asset status? This action will remove the status from the Asset Status dataset."
+        title={t('assetStatus.deleteTitle')}
+        description={t('assetStatus.deleteDesc')}
         itemSummary={
           deleteTarget
-            ? `${deleteTarget.statusCode} — ${deleteTarget.statusName}`
+            ? `${deleteTarget.statusCode} — ${getLocalizedStatusName(
+                deleteTarget.statusName
+              )}`
             : ''
         }
-        confirmLabel="Delete Status"
+        confirmLabel={t('assetStatus.confirmDelete')}
+        cancelLabel={t('assetStatus.cancel')}
         loading={submitting}
       />
     </div>

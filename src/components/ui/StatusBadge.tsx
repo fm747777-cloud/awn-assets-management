@@ -31,6 +31,13 @@ const STATUS_ARABIC_MAP: Record<string, string> = {
   Standard: 'قياسي',
   Compliance: 'امتثال',
   'Non-Compliance': 'قياسي',
+  Pending: 'قيد الانتظار',
+  Completed: 'مكتمل',
+  Inprogress: 'قيد التنفيذ',
+  'In Progress': 'قيد التنفيذ',
+  Rejected: 'مرفوض',
+  Todo: 'للمتابعة',
+  Deactivated: 'معطّل',
 };
 
 const TONE_CONFIG: Record<StatusTone, { icon: LucideIcon; classes: string }> = {
@@ -76,7 +83,15 @@ export function StatusBadge({
   const { isRtl } = useLanguage();
   const config = TONE_CONFIG[tone] || TONE_CONFIG.neutral;
   const Icon = config.icon;
-  const displayLabel = isRtl && STATUS_ARABIC_MAP[label] ? STATUS_ARABIC_MAP[label] : label;
+  let displayLabel = label;
+  if (isRtl) {
+    if (STATUS_ARABIC_MAP[label]) {
+      displayLabel = STATUS_ARABIC_MAP[label];
+    } else if (label.startsWith('Status: ')) {
+      const sub = label.slice(8);
+      displayLabel = STATUS_ARABIC_MAP[sub] ? `الحالة: ${STATUS_ARABIC_MAP[sub]}` : `الحالة: ${sub}`;
+    }
+  }
 
   return (
     <span

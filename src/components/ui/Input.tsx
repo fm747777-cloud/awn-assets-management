@@ -51,7 +51,7 @@ export function Input({
 
       <div className="relative flex items-center">
         {leftIcon && (
-          <span className="absolute left-3 text-awn-text-muted pointer-events-none flex items-center">
+          <span className="absolute left-3 rtl:left-auto rtl:right-3 text-awn-text-muted pointer-events-none flex items-center">
             {leftIcon}
           </span>
         )}
@@ -68,8 +68,8 @@ export function Input({
           aria-invalid={Boolean(error)}
           aria-describedby={[descId, errId].filter(Boolean).join(' ') || undefined}
           className={`w-full h-9 rounded-md bg-awn-surface text-sm text-awn-text-primary placeholder:text-awn-text-muted border transition-colors duration-150 ${
-            leftIcon ? 'pl-9' : 'pl-3'
-          } ${onClear && value ? 'pr-8' : rightSlot ? 'pr-9' : 'pr-3'} ${
+            leftIcon ? 'pl-9 rtl:pl-3 rtl:pr-9' : 'pl-3 rtl:pr-3'
+          } ${onClear && value ? 'pr-8 rtl:pr-3 rtl:pl-8' : rightSlot ? 'pr-9 rtl:pr-3 rtl:pl-9' : 'pr-3 rtl:pl-3'} ${
             error
               ? 'border-awn-error focus:outline-awn-error'
               : 'border-awn-border hover:border-awn-border-strong'
@@ -82,14 +82,14 @@ export function Input({
             type="button"
             onClick={onClear}
             aria-label="Clear input"
-            className="absolute right-2.5 text-awn-text-muted hover:text-awn-text-primary p-0.5 rounded cursor-pointer"
+            className="absolute right-2.5 rtl:right-auto rtl:left-2.5 text-awn-text-muted hover:text-awn-text-primary p-0.5 rounded cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         )}
 
         {!onClear && rightSlot && (
-          <span className="absolute right-3 text-awn-text-muted flex items-center">
+          <span className="absolute right-3 rtl:right-auto rtl:left-3 text-awn-text-muted flex items-center">
             {rightSlot}
           </span>
         )}

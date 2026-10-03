@@ -44,7 +44,7 @@ export function Drawer({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end"
+      className="fixed inset-0 z-50 flex justify-end rtl:justify-start"
       role="dialog"
       aria-modal="true"
       aria-labelledby="drawer-title"
@@ -57,7 +57,7 @@ export function Drawer({
       />
 
       <div
-        className={`relative z-10 w-full ${widthClass} h-full bg-awn-surface border-l border-awn-border flex flex-col`}
+        className={`relative z-10 w-full ${widthClass} h-full bg-awn-surface border-l rtl:border-l-0 rtl:border-r border-awn-border flex flex-col`}
         style={{ boxShadow: 'var(--awn-shadow-overlay)' }}
       >
         <div className="px-6 py-4 border-b border-awn-border flex items-start justify-between gap-4 shrink-0">

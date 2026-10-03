@@ -8,6 +8,12 @@ import { assetsEn } from './en/assets.ts';
 import { assetsAr } from './ar/assets.ts';
 import { notificationsEn } from './en/notifications.ts';
 import { notificationsAr } from './ar/notifications.ts';
+import { complianceAssetsEn } from './en/complianceAssets.ts';
+import { complianceAssetsAr } from './ar/complianceAssets.ts';
+import { nonComplianceAssetsEn } from './en/nonComplianceAssets.ts';
+import { nonComplianceAssetsAr } from './ar/nonComplianceAssets.ts';
+import { assetStatusEn } from './en/assetStatus.ts';
+import { assetStatusAr } from './ar/assetStatus.ts';
 import type { AppLanguage } from './types.ts';
 
 export const translations = {
@@ -17,6 +23,9 @@ export const translations = {
     dashboard: dashboardEn,
     assets: assetsEn,
     notifications: notificationsEn,
+    complianceAssets: complianceAssetsEn,
+    nonComplianceAssets: nonComplianceAssetsEn,
+    assetStatus: assetStatusEn,
   },
   ar: {
     common: commonAr,
@@ -24,6 +33,9 @@ export const translations = {
     dashboard: dashboardAr,
     assets: assetsAr,
     notifications: notificationsAr,
+    complianceAssets: complianceAssetsAr,
+    nonComplianceAssets: nonComplianceAssetsAr,
+    assetStatus: assetStatusAr,
   },
 } as const;
 
@@ -119,13 +131,16 @@ export function translate(
 ): string {
   const parts = key.split('.');
   const namespace = parts[0] as keyof typeof translations.en;
-  const itemKey = parts[1];
+  const fullSubKey = parts.slice(1).join('.');
+  const directSubKey = parts[1];
 
   const dict = translations[language] || translations.en;
-  const nsDict = (dict as Record<string, Record<string, string>>)[namespace];
-  let text = nsDict?.[itemKey] || (translations.en as Record<string, Record<string, string>>)[namespace]?.[itemKey] || key;
+  const nsDict = (dict as Record<string, any>)?.[namespace];
+  const enNsDict = (translations.en as Record<string, any>)?.[namespace];
 
-  if (params) {
+  let text = nsDict?.[fullSubKey] ?? nsDict?.[directSubKey] ?? enNsDict?.[fullSubKey] ?? enNsDict?.[directSubKey] ?? key;
+
+  if (params && typeof text === 'string') {
     Object.entries(params).forEach(([k, v]) => {
       text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
     });

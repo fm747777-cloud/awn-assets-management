@@ -56,7 +56,7 @@ export function Select({
           required={required}
           aria-invalid={Boolean(error)}
           aria-describedby={[descId, errId].filter(Boolean).join(' ') || undefined}
-          className={`w-full h-9 appearance-none rounded-md bg-awn-surface pl-3 pr-9 text-sm text-awn-text-primary border transition-colors duration-150 cursor-pointer ${
+          className={`w-full h-9 appearance-none rounded-md bg-awn-surface pl-3 pr-9 rtl:pr-3 rtl:pl-9 text-sm text-awn-text-primary border transition-colors duration-150 cursor-pointer ${
             error
               ? 'border-awn-error focus:outline-awn-error'
               : 'border-awn-border hover:border-awn-border-strong'
@@ -80,7 +80,7 @@ export function Select({
         </select>
 
         <ChevronDown
-          className="w-4 h-4 text-awn-text-muted pointer-events-none absolute right-3"
+          className="w-4 h-4 text-awn-text-muted pointer-events-none absolute right-3 rtl:right-auto rtl:left-3"
           aria-hidden="true"
         />
       </div>

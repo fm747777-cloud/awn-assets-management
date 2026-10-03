@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { assetModuleService } from '../services/assetModuleService.ts';
 import { useToast } from '../hooks/useToast.tsx';
+import { useLanguage } from '../hooks/useLanguage.tsx';
 import { PageHeader } from '../components/ui/PageHeader.tsx';
 import { Button } from '../components/ui/Button.tsx';
 import { Card } from '../components/ui/Card.tsx';
@@ -120,6 +121,7 @@ interface FileCopyFieldProps {
   error?: string;
   required?: boolean;
   placeholder?: string;
+  browseLabel?: string;
 }
 
 /**
@@ -132,6 +134,7 @@ function FileCopyField({
   error,
   required = false,
   placeholder = 'Select or enter document file reference...',
+  browseLabel = 'Browse',
 }: FileCopyFieldProps) {
   const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -158,7 +161,7 @@ function FileCopyField({
         </div>
         <label className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-awn-surface-alt border border-awn-border hover:border-awn-border-strong text-xs font-medium text-awn-text-primary cursor-pointer shrink-0 transition-colors">
           <Upload className="w-3.5 h-3.5 text-awn-primary" aria-hidden="true" />
-          <span>Browse</span>
+          <span>{browseLabel}</span>
           <input
             type="file"
             className="sr-only"
@@ -186,6 +189,8 @@ function FlowProgressHeader({
   onStepClick,
   isEditingExisting,
 }: FlowProgressHeaderProps) {
+  const { t } = useLanguage();
+
   const steps: Array<{
     id: ComplianceFlowStep;
     stepNum: string;
@@ -195,20 +200,22 @@ function FlowProgressHeader({
     {
       id: 'choose-documents',
       stepNum: '01',
-      label: 'Choose Documents',
-      subtitle: 'Select required compliance documents',
+      label: t('complianceAssets.step1'),
+      subtitle: t('complianceAssets.step1Subtitle'),
     },
     {
       id: 'add-form',
       stepNum: '02',
-      label: isEditingExisting ? 'Edit Compliance Asset' : 'Add Compliance Asset',
-      subtitle: 'Complete vehicle & document sections',
+      label: isEditingExisting
+        ? t('complianceAssets.step2Edit')
+        : t('complianceAssets.step2'),
+      subtitle: t('complianceAssets.step2Subtitle'),
     },
     {
       id: 'details',
       stepNum: '03',
-      label: 'Asset Details',
-      subtitle: 'Verification & Document Matrix',
+      label: t('complianceAssets.step3'),
+      subtitle: t('complianceAssets.step3Subtitle'),
     },
   ];
 
@@ -231,7 +238,7 @@ function FlowProgressHeader({
               type="button"
               disabled={!canNavigateBack}
               onClick={() => canNavigateBack && onStepClick?.(step.id)}
-              className={`text-left p-3 rounded-md border transition-colors flex items-center gap-3 ${
+              className={`text-left rtl:text-right p-3 rounded-md border transition-colors flex items-center gap-3 ${
                 isCurrent
                   ? 'bg-awn-primary-soft border-awn-primary'
                   : isCompleted
@@ -276,8 +283,149 @@ export default function ComplianceAssetsPage({
   onNavigate,
 }: ComplianceAssetsPageProps) {
   const { showToast } = useToast();
+  const { t, isRtl, formatNumber } = useLanguage();
   const docOptions = assetModuleService.getComplianceDocumentOptions();
   const selectOpts = assetModuleService.getComplianceSelectOptions();
+
+  // Helper mappings for localized document titles and descriptions
+  const getComplianceDocTitle = useCallback(
+    (id: ComplianceDocumentId | string) => {
+      switch (id) {
+        case 'Insurance Information':
+          return t('complianceAssets.docInsurance');
+        case 'Operations Card Info':
+          return t('complianceAssets.docOperationsCard');
+        case 'Vehicle Registration Info':
+          return t('complianceAssets.docRegistration');
+        case 'Vehicle Fitness Info':
+          return t('complianceAssets.docFitness');
+        case 'Driving License':
+          return t('complianceAssets.docDrivingLicense');
+        default:
+          return id;
+      }
+    },
+    [t]
+  );
+
+  const getComplianceDocDesc = useCallback(
+    (id: ComplianceDocumentId | string, defaultDesc: string) => {
+      switch (id) {
+        case 'Insurance Information':
+          return t('complianceAssets.docInsuranceDesc');
+        case 'Operations Card Info':
+          return t('complianceAssets.docOperationsCardDesc');
+        case 'Vehicle Registration Info':
+          return t('complianceAssets.docRegistrationDesc');
+        case 'Vehicle Fitness Info':
+          return t('complianceAssets.docFitnessDesc');
+        case 'Driving License':
+          return t('complianceAssets.docDrivingLicenseDesc');
+        default:
+          return defaultDesc;
+      }
+    },
+    [t]
+  );
+
+  const getMatrixDocName = useCallback(
+    (docName: string) => {
+      switch (docName) {
+        case 'Driver License':
+          return t('complianceAssets.docDrivingLicense');
+        case 'Registration':
+          return t('complianceAssets.docRegistration');
+        case 'Fitness Card':
+          return t('complianceAssets.docFitness');
+        case 'Insurance Policy':
+          return t('complianceAssets.docInsurance');
+        case 'Operations Card':
+          return t('complianceAssets.docOperationsCard');
+        default:
+          return docName;
+      }
+    },
+    [t]
+  );
+
+  const getFilterLabel = useCallback(
+    (st: string) => {
+      switch (st) {
+        case 'ALL':
+          return t('complianceAssets.filterAll');
+        case 'Active':
+          return t('complianceAssets.filterActive');
+        case 'Compliance Due':
+          return t('complianceAssets.filterComplianceDue');
+        case 'Draft':
+          return t('complianceAssets.filterDraft');
+        case 'Retired':
+          return t('complianceAssets.filterRetired');
+        default:
+          return st;
+      }
+    },
+    [t]
+  );
+
+  // Localized select options (display only, preserving stored values)
+  const localizedSelectOpts = useMemo(() => {
+    if (!isRtl) return selectOpts;
+    return {
+      ...selectOpts,
+      languages: selectOpts.languages.map((opt) => ({
+        ...opt,
+        label:
+          opt.value === 'English'
+            ? 'الإنجليزية'
+            : opt.value === 'Arabic (العربية)'
+            ? 'العربية'
+            : 'ثنائي اللغة (EN / AR)',
+      })),
+      assetCategories: selectOpts.assetCategories.map((opt) => ({
+        ...opt,
+        label:
+          opt.value === 'Commercial & Utility Vehicles'
+            ? 'مركبات تجارية ومرافق'
+            : opt.label,
+      })),
+      complianceTypes: selectOpts.complianceTypes.map((opt) => ({
+        ...opt,
+        label:
+          opt.value === 'TGA & Traffic Statutory Compliance'
+            ? 'اشتراطات هيئة النقل والمرور النظامية'
+            : opt.label,
+      })),
+      assetTypes: selectOpts.assetTypes.map((opt) => ({
+        ...opt,
+        label:
+          opt.value === 'Heavy Duty Flatbed Truck'
+            ? 'شاحنة نقل مسطحة ثقيلة'
+            : opt.label,
+      })),
+      registrationTypes: selectOpts.registrationTypes.map((opt) => ({
+        ...opt,
+        label:
+          opt.value === 'Commercial Transport (نقل عام)'
+            ? 'نقل عام (Commercial Transport)'
+            : opt.label,
+      })),
+      vehicleCategories: selectOpts.vehicleCategories.map((opt) => ({
+        ...opt,
+        label:
+          opt.value === 'Heavy Truck (شاحنة ثقيلة)'
+            ? 'شاحنة ثقيلة (Heavy Truck)'
+            : opt.label,
+      })),
+      insuranceTypes: selectOpts.insuranceTypes.map((opt) => ({
+        ...opt,
+        label:
+          opt.value === 'Comprehensive Commercial Fleet'
+            ? 'تأمين شامل للأسطول التجاري'
+            : opt.label,
+      })),
+    };
+  }, [isRtl, selectOpts]);
 
   // Flow steps: 'list' | 'choose-documents' | 'add-form' | 'details'
   const [flowStep, setFlowStep] = useState<ComplianceFlowStep>(() =>
@@ -368,8 +516,8 @@ export default function ComplianceAssetsPage({
     if (e) e.preventDefault();
     if (selectedDocuments.length === 0) {
       showToast({
-        title: 'Select at least one document',
-        description: 'Please select at least one compliance document section to proceed.',
+        title: isRtl ? 'اختر مستنداً واحداً على الأقل' : 'Select at least one document',
+        description: t('complianceAssets.selectAtLeastOneDoc'),
         variant: 'warning',
       });
       return;
@@ -493,8 +641,10 @@ export default function ComplianceAssetsPage({
     });
     setFormErrors({});
     showToast({
-      title: 'Sample values populated',
-      description: 'Form fields populated with sample vehicle and compliance document data.',
+      title: isRtl ? 'تمت تعبئة البيانات' : 'Sample values populated',
+      description: isRtl
+        ? 'تم ملء حقول النموذج ببيانات تجريبية للمركبة ووثائق الامتثال.'
+        : 'Form fields populated with sample vehicle and compliance document data.',
       variant: 'info',
     });
   };
@@ -504,118 +654,114 @@ export default function ComplianceAssetsPage({
 
     // Basic Details validation
     if (!formData.basicDetails.customer) {
-      errors['basicDetails.customer'] = 'Customer is required.';
+      errors['basicDetails.customer'] = t('complianceAssets.customerRequired');
     }
     if (!formData.basicDetails.business) {
-      errors['basicDetails.business'] = 'Business unit is required.';
+      errors['basicDetails.business'] = t('complianceAssets.businessRequired');
     }
     if (!formData.basicDetails.assetsCategory) {
-      errors['basicDetails.assetsCategory'] = 'Assets Category is required.';
+      errors['basicDetails.assetsCategory'] = t('complianceAssets.categoryRequired');
     }
     if (!formData.basicDetails.assetsType) {
-      errors['basicDetails.assetsType'] = 'Assets type is required.';
+      errors['basicDetails.assetsType'] = t('complianceAssets.assetsTypeRequired');
     }
 
     // Vehicle Information validation
     if (!formData.vehicleInfo.plateNumberEn.trim()) {
-      errors['vehicleInfo.plateNumberEn'] = 'Plate Number (English) is required.';
+      errors['vehicleInfo.plateNumberEn'] = t('complianceAssets.plateEnRequired');
     }
     if (!formData.vehicleInfo.plateNumberAr.trim()) {
-      errors['vehicleInfo.plateNumberAr'] = 'Plate Number (Arabic) is required.';
+      errors['vehicleInfo.plateNumberAr'] = t('complianceAssets.plateArRequired');
     }
     if (!formData.vehicleInfo.ownerName.trim()) {
-      errors['vehicleInfo.ownerName'] = 'Owner Name is required.';
+      errors['vehicleInfo.ownerName'] = t('complianceAssets.ownerNameRequired');
     }
     if (!formData.vehicleInfo.ownerId.trim()) {
-      errors['vehicleInfo.ownerId'] = 'Owner ID is required.';
+      errors['vehicleInfo.ownerId'] = t('complianceAssets.ownerIdRequired');
     }
     if (!formData.vehicleInfo.serialNumber.trim()) {
-      errors['vehicleInfo.serialNumber'] = 'Serial Number is required.';
+      errors['vehicleInfo.serialNumber'] = t('complianceAssets.serialRequired');
     }
     if (!formData.vehicleInfo.vinNumber.trim()) {
-      errors['vehicleInfo.vinNumber'] = 'VIN Number is required.';
+      errors['vehicleInfo.vinNumber'] = t('complianceAssets.vinRequired');
     }
 
     // Selected Document Sections validation
     if (selectedDocuments.includes('Driving License')) {
       if (!formData.driverInfo.driverId.trim()) {
-        errors['driverInfo.driverId'] = 'Driver ID is required.';
+        errors['driverInfo.driverId'] = t('complianceAssets.driverIdRequired');
       }
       if (!formData.driverInfo.driverName.trim()) {
-        errors['driverInfo.driverName'] = 'Driver Name is required.';
+        errors['driverInfo.driverName'] = t('complianceAssets.driverNameRequired');
       }
       if (!formData.driverInfo.driverLicenseCopy.trim()) {
-        errors['driverInfo.driverLicenseCopy'] = 'Driver License Copy is required.';
+        errors['driverInfo.driverLicenseCopy'] = t('complianceAssets.driverLicenseCopyRequired');
       }
     }
 
     if (selectedDocuments.includes('Vehicle Registration Info')) {
       if (!formData.registrationDetails.brand.trim()) {
-        errors['registrationDetails.brand'] = 'Brand is required.';
+        errors['registrationDetails.brand'] = t('complianceAssets.brandRequired');
       }
       if (!formData.registrationDetails.color.trim()) {
-        errors['registrationDetails.color'] = 'Color is required.';
+        errors['registrationDetails.color'] = t('complianceAssets.colorRequired');
       }
       if (!formData.registrationDetails.registrationIssueDate) {
-        errors['registrationDetails.registrationIssueDate'] =
-          'Registration Issue Date is required.';
+        errors['registrationDetails.registrationIssueDate'] = t('complianceAssets.regIssueDateRequired');
       }
       if (!formData.registrationDetails.registrationValidityDate) {
-        errors['registrationDetails.registrationValidityDate'] =
-          'Registration Validity Date is required.';
+        errors['registrationDetails.registrationValidityDate'] = t('complianceAssets.regValidityDateRequired');
       }
       if (!formData.registrationDetails.registrationCopy.trim()) {
-        errors['registrationDetails.registrationCopy'] = 'Registration Copy is required.';
+        errors['registrationDetails.registrationCopy'] = t('complianceAssets.regCopyRequired');
       }
     }
 
     if (selectedDocuments.includes('Vehicle Fitness Info')) {
       if (!formData.fitnessDetails.fitnessName.trim()) {
-        errors['fitnessDetails.fitnessName'] = 'Fitness Name is required.';
+        errors['fitnessDetails.fitnessName'] = t('complianceAssets.fitnessNameRequired');
       }
       if (!formData.fitnessDetails.fitnessNumber.trim()) {
-        errors['fitnessDetails.fitnessNumber'] = 'Fitness Number is required.';
+        errors['fitnessDetails.fitnessNumber'] = t('complianceAssets.fitnessNumberRequired');
       }
       if (!formData.fitnessDetails.expiryDate) {
-        errors['fitnessDetails.expiryDate'] = 'Expiry Date is required.';
+        errors['fitnessDetails.expiryDate'] = t('complianceAssets.fitnessExpiryRequired');
       }
       if (!formData.fitnessDetails.fitnessDocumentCopy.trim()) {
-        errors['fitnessDetails.fitnessDocumentCopy'] = 'Fitness Document Copy is required.';
+        errors['fitnessDetails.fitnessDocumentCopy'] = t('complianceAssets.fitnessCopyRequired');
       }
     }
 
     if (selectedDocuments.includes('Insurance Information')) {
       if (!formData.insuranceInfo.policyName.trim()) {
-        errors['insuranceInfo.policyName'] = 'Policy Name is required.';
+        errors['insuranceInfo.policyName'] = t('complianceAssets.policyNameRequired');
       }
       if (!formData.insuranceInfo.insurancePolicyNumber.trim()) {
-        errors['insuranceInfo.insurancePolicyNumber'] =
-          'Insurance Policy Number is required.';
+        errors['insuranceInfo.insurancePolicyNumber'] = t('complianceAssets.policyNumberRequired');
       }
       if (!formData.insuranceInfo.insuranceValidity) {
-        errors['insuranceInfo.insuranceValidity'] = 'Insurance Validity is required.';
+        errors['insuranceInfo.insuranceValidity'] = t('complianceAssets.insuranceValidityRequired');
       }
       if (!formData.insuranceInfo.operationsCardCopy.trim()) {
-        errors['insuranceInfo.operationsCardCopy'] = 'Operations Card Copy is required.';
+        errors['insuranceInfo.operationsCardCopy'] = t('complianceAssets.opsCardCopyRequired');
       }
     }
 
     if (selectedDocuments.includes('Operations Card Info')) {
       if (!formData.operationsCardInfo.cardName.trim()) {
-        errors['operationsCardInfo.cardName'] = 'Card Name is required.';
+        errors['operationsCardInfo.cardName'] = t('complianceAssets.cardNameRequired');
       }
       if (!formData.operationsCardInfo.cardNumber.trim()) {
-        errors['operationsCardInfo.cardNumber'] = 'Card Number is required.';
+        errors['operationsCardInfo.cardNumber'] = t('complianceAssets.cardNumberRequired');
       }
       if (!formData.operationsCardInfo.issueDate) {
-        errors['operationsCardInfo.issueDate'] = 'Issue Date is required.';
+        errors['operationsCardInfo.issueDate'] = t('complianceAssets.issueDateRequired');
       }
       if (!formData.operationsCardInfo.expiryDate) {
-        errors['operationsCardInfo.expiryDate'] = 'Expiry Date is required.';
+        errors['operationsCardInfo.expiryDate'] = t('complianceAssets.expiryDateRequired');
       }
       if (!formData.operationsCardInfo.operationsCardCopy.trim()) {
-        errors['operationsCardInfo.operationsCardCopy'] =
-          'Operations Card Copy is required.';
+        errors['operationsCardInfo.operationsCardCopy'] = t('complianceAssets.opsCardCopyRequired');
       }
     }
 
@@ -638,13 +784,21 @@ export default function ComplianceAssetsPage({
       setSuccessModalOpen(false);
       setLastSubmissionBanner({
         type: 'draft',
-        title: `Saved as Draft (${saved.code})`,
-        message: `Draft ${saved.code} has been preserved in the mock service state. You can review its current details below or click "Edit Asset" at any time to complete and submit.`,
+        title: isRtl
+          ? `تم الحفظ كمسودة (${saved.code})`
+          : `Saved as Draft (${saved.code})`,
+        message: isRtl
+          ? `تم حفظ المسودة ${saved.code} في النظام. يمكنك مراجعة تفاصيلها أدناه أو النقر على "تعديل بيانات الأصل" لإكمال البيانات وتقديمها.`
+          : `Draft ${saved.code} has been preserved in the mock service state. You can review its current details below or click "Edit Asset" at any time to complete and submit.`,
       });
       await loadComplianceList();
       showToast({
-        title: `Saved as Draft (${saved.code})`,
-        description: 'Entered compliance asset data has been preserved as a draft.',
+        title: isRtl
+          ? `تم الحفظ كمسودة (${saved.code})`
+          : `Saved as Draft (${saved.code})`,
+        description: isRtl
+          ? 'تم حفظ بيانات أصل الامتثال المدخلة كمسودة.'
+          : 'Entered compliance asset data has been preserved as a draft.',
         variant: 'info',
       });
       setFlowStep('details');
@@ -658,9 +812,8 @@ export default function ComplianceAssetsPage({
     if (e) e.preventDefault();
     if (!validateComplianceForm()) {
       showToast({
-        title: 'Required fields missing',
-        description:
-          'Please complete the highlighted required fields or use "Save as Draft" to continue later.',
+        title: isRtl ? 'حقول إلزامية مطلوبة' : 'Required fields missing',
+        description: t('complianceAssets.missingRequiredFields'),
         variant: 'warning',
       });
       return;
@@ -675,22 +828,18 @@ export default function ComplianceAssetsPage({
         },
         { isDraft: false, existingId: editingAssetId }
       );
-      const successTitle = 'Asset Added Successfully!';
-      const successDescription =
-        'The asset has been recorded in the system. You can now assign it to an employee, track its status, and manage it from the Assets dashboard.';
-
       setActiveAsset(saved);
       setEditingAssetId(saved.id);
       setLastSubmissionBanner({
         type: 'submitted',
-        title: successTitle,
-        message: successDescription,
+        title: t('complianceAssets.assetAddedSuccess'),
+        message: t('complianceAssets.assetAddedDesc'),
       });
       setSuccessModalOpen(true);
       await loadComplianceList();
       showToast({
-        title: successTitle,
-        description: successDescription,
+        title: t('complianceAssets.assetAddedSuccess'),
+        description: t('complianceAssets.assetAddedDesc'),
         variant: 'success',
       });
       setFlowStep('details');
@@ -729,16 +878,34 @@ export default function ComplianceAssetsPage({
         : ['Operations Card Info']
     );
     setFormData({
-      basicDetails: { ...EMPTY_COMPLIANCE_FORM.basicDetails, ...(asset.basicDetails || {}) },
-      vehicleInfo: { ...EMPTY_COMPLIANCE_FORM.vehicleInfo, ...(asset.vehicleInfo || {}) },
-      driverInfo: { ...EMPTY_COMPLIANCE_FORM.driverInfo, ...(asset.driverInfo || {}) },
-      documentsInfo: { ...EMPTY_COMPLIANCE_FORM.documentsInfo, ...(asset.documentsInfo || {}) },
+      basicDetails: {
+        ...EMPTY_COMPLIANCE_FORM.basicDetails,
+        ...(asset.basicDetails || {}),
+      },
+      vehicleInfo: {
+        ...EMPTY_COMPLIANCE_FORM.vehicleInfo,
+        ...(asset.vehicleInfo || {}),
+      },
+      driverInfo: {
+        ...EMPTY_COMPLIANCE_FORM.driverInfo,
+        ...(asset.driverInfo || {}),
+      },
+      documentsInfo: {
+        ...EMPTY_COMPLIANCE_FORM.documentsInfo,
+        ...(asset.documentsInfo || {}),
+      },
       registrationDetails: {
         ...EMPTY_COMPLIANCE_FORM.registrationDetails,
         ...(asset.registrationDetails || {}),
       },
-      fitnessDetails: { ...EMPTY_COMPLIANCE_FORM.fitnessDetails, ...(asset.fitnessDetails || {}) },
-      insuranceInfo: { ...EMPTY_COMPLIANCE_FORM.insuranceInfo, ...(asset.insuranceInfo || {}) },
+      fitnessDetails: {
+        ...EMPTY_COMPLIANCE_FORM.fitnessDetails,
+        ...(asset.fitnessDetails || {}),
+      },
+      insuranceInfo: {
+        ...EMPTY_COMPLIANCE_FORM.insuranceInfo,
+        ...(asset.insuranceInfo || {}),
+      },
       operationsCardInfo: {
         ...EMPTY_COMPLIANCE_FORM.operationsCardInfo,
         ...(asset.operationsCardInfo || {}),
@@ -763,8 +930,12 @@ export default function ComplianceAssetsPage({
       setRetireReason('');
       await loadComplianceList();
       showToast({
-        title: `Asset ${updated.code} Retired`,
-        description: 'The compliance asset has been deactivated and marked as Retired.',
+        title: isRtl
+          ? `تم استبعاد الأصل ${updated.code}`
+          : `Asset ${updated.code} Retired`,
+        description: isRtl
+          ? 'تم تعطيل أصل الامتثال وتحديده كأصل متقاعد/مستبعد.'
+          : 'The compliance asset has been deactivated and marked as Retired.',
         variant: 'info',
       });
     } finally {
@@ -782,13 +953,19 @@ export default function ComplianceAssetsPage({
           <Button
             variant="ghost"
             size="sm"
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={
+              isRtl ? (
+                <ArrowRight className="w-4 h-4" />
+              ) : (
+                <ArrowLeft className="w-4 h-4" />
+              )
+            }
             onClick={() => setFlowStep('list')}
           >
-            Back to Compliance Assets
+            {t('complianceAssets.backToComplianceAssets')}
           </Button>
           <span className="text-xs text-awn-text-muted">
-            Step 1 of 3 · Document Scope Selection
+            {t('complianceAssets.stepNoticeChoose')}
           </span>
         </div>
 
@@ -799,8 +976,8 @@ export default function ComplianceAssetsPage({
         />
 
         <PageHeader
-          title="Choose Documents"
-          description="Select the compliance document sections required for this asset. Your selection determines which relevant document sections appear in the Compliance Asset form."
+          title={t('complianceAssets.chooseDocsTitle')}
+          description={t('complianceAssets.chooseDocsDesc')}
           secondaryActions={
             <Button
               variant="outline"
@@ -808,13 +985,15 @@ export default function ComplianceAssetsPage({
               onClick={() => {
                 const allIds = docOptions.map((d) => d.id);
                 setSelectedDocuments(
-                  selectedDocuments.length === allIds.length ? ['Operations Card Info'] : allIds
+                  selectedDocuments.length === allIds.length
+                    ? ['Operations Card Info']
+                    : allIds
                 );
               }}
             >
               {selectedDocuments.length === docOptions.length
-                ? 'Reset to Default (Operations Card)'
-                : 'Select All Documents'}
+                ? t('complianceAssets.resetDefaultDocs')
+                : t('complianceAssets.selectAllDocs')}
             </Button>
           }
         />
@@ -822,18 +1001,17 @@ export default function ComplianceAssetsPage({
         <form onSubmit={handleChooseDocumentsSubmit} className="space-y-6">
           {/* Selected Documents Summary */}
           <Card
-            title="Selected Documents"
-            description="These document sections will be displayed in the Add Compliance Asset form."
+            title={t('complianceAssets.selectedDocsTitle')}
+            description={t('complianceAssets.selectedDocsDesc')}
           >
             {selectedDocuments.length === 0 ? (
               <p className="text-xs text-awn-text-muted">
-                No documents selected. Choose at least one document below to continue.
+                {t('complianceAssets.noDocsSelected')}
               </p>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
                 {selectedDocuments.map((docId) => {
-                  const displayLabel =
-                    docId === 'Operations Card Info' ? 'Operations Card' : docId;
+                  const displayLabel = getComplianceDocTitle(docId);
                   return (
                     <div
                       key={docId}
@@ -850,22 +1028,28 @@ export default function ComplianceAssetsPage({
 
           {/* Available Documents List (Exact 5 Supplied Document Types) */}
           <Card
-            title="Available Documents"
-            description="Select or deselect the statutory and operational documents required for this compliance asset."
+            title={t('complianceAssets.availableDocsTitle')}
+            description={t('complianceAssets.availableDocsDesc')}
             footer={
               <>
                 <Button
                   variant="outline"
                   onClick={() => setFlowStep('list')}
                 >
-                  Go Back
+                  {t('complianceAssets.goBack')}
                 </Button>
                 <Button
                   type="submit"
                   variant="primary"
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
+                  rightIcon={
+                    isRtl ? (
+                      <ArrowLeft className="w-4 h-4" />
+                    ) : (
+                      <ArrowRight className="w-4 h-4" />
+                    )
+                  }
                 >
-                  Submit
+                  {t('complianceAssets.submit')}
                 </Button>
               </>
             }
@@ -873,6 +1057,9 @@ export default function ComplianceAssetsPage({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {docOptions.map((doc) => {
                 const isSelected = selectedDocuments.includes(doc.id);
+                const title = getComplianceDocTitle(doc.id);
+                const description = getComplianceDocDesc(doc.id, doc.description);
+
                 return (
                   <label
                     key={doc.id}
@@ -891,16 +1078,16 @@ export default function ComplianceAssetsPage({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-sm font-semibold text-awn-text-primary">
-                          {doc.label}
+                          {title}
                         </span>
                         {isSelected && (
                           <span className="text-[11px] font-semibold text-awn-primary">
-                            Selected
+                            {t('complianceAssets.selectedBadge')}
                           </span>
                         )}
                       </div>
                       <p className="text-xs text-awn-text-secondary mt-1 leading-relaxed">
-                        {doc.description}
+                        {description}
                       </p>
                     </div>
                   </label>
@@ -929,13 +1116,19 @@ export default function ComplianceAssetsPage({
           <Button
             variant="ghost"
             size="sm"
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={
+              isRtl ? (
+                <ArrowRight className="w-4 h-4" />
+              ) : (
+                <ArrowLeft className="w-4 h-4" />
+              )
+            }
             onClick={() => setFlowStep('choose-documents')}
           >
-            Go Back to Choose Documents
+            {t('complianceAssets.goBack')}
           </Button>
           <span className="text-xs text-awn-text-muted">
-            Step 2 of 3 · Structured Compliance Data Capture
+            {t('complianceAssets.stepNoticeForm')}
           </span>
         </div>
 
@@ -946,15 +1139,19 @@ export default function ComplianceAssetsPage({
         />
 
         <PageHeader
-          title={editingAssetId ? `Edit Compliance Asset (${editingAssetId})` : 'Add Compliance Asset'}
-          description="Complete the required asset, vehicle, and selected compliance document sections below. You can return to Choose Documents without losing entered values, save as a draft, or submit to view Asset Details."
+          title={
+            editingAssetId
+              ? t('complianceAssets.editingAssetTitle', { id: editingAssetId })
+              : t('complianceAssets.step2')
+          }
+          description={t('complianceAssets.formNotice')}
           secondaryActions={
             <Button
               variant="outline"
               size="sm"
               onClick={handlePopulateDemoValues}
             >
-              Fill Sample Data
+              {t('complianceAssets.fillSampleData')}
             </Button>
           }
         />
@@ -965,23 +1162,23 @@ export default function ComplianceAssetsPage({
               {/* SECTION 1: BASIC DETAILS */}
               <FormSection
                 stepNumber="01"
-                title="Basic Details"
-                description="Organizational ownership, compliance mandate, and asset classification."
+                title={t('complianceAssets.basicDetails')}
+                description={t('complianceAssets.basicDetailsDesc')}
                 columns={2}
               >
                 <Select
-                  label="Language"
+                  label={t('complianceAssets.language')}
                   required
-                  options={selectOpts.languages}
+                  options={localizedSelectOpts.languages}
                   value={formData.basicDetails.language}
                   onChange={(e) =>
                     updateSectionField('basicDetails', 'language', e.target.value)
                   }
                 />
                 <Select
-                  label="Customer"
+                  label={t('complianceAssets.customer')}
                   required
-                  options={selectOpts.customers}
+                  options={localizedSelectOpts.customers}
                   value={formData.basicDetails.customer}
                   onChange={(e) =>
                     updateSectionField('basicDetails', 'customer', e.target.value)
@@ -989,9 +1186,9 @@ export default function ComplianceAssetsPage({
                   error={formErrors['basicDetails.customer']}
                 />
                 <Select
-                  label="Business"
+                  label={t('complianceAssets.business')}
                   required
-                  options={selectOpts.businesses}
+                  options={localizedSelectOpts.businesses}
                   value={formData.basicDetails.business}
                   onChange={(e) =>
                     updateSectionField('basicDetails', 'business', e.target.value)
@@ -999,9 +1196,9 @@ export default function ComplianceAssetsPage({
                   error={formErrors['basicDetails.business']}
                 />
                 <Select
-                  label="Assets Category"
+                  label={t('complianceAssets.assetsCategory')}
                   required
-                  options={selectOpts.assetCategories}
+                  options={localizedSelectOpts.assetCategories}
                   value={formData.basicDetails.assetsCategory}
                   onChange={(e) =>
                     updateSectionField('basicDetails', 'assetsCategory', e.target.value)
@@ -1009,18 +1206,18 @@ export default function ComplianceAssetsPage({
                   error={formErrors['basicDetails.assetsCategory']}
                 />
                 <Select
-                  label="Compliance"
+                  label={t('complianceAssets.compliance')}
                   required
-                  options={selectOpts.complianceTypes}
+                  options={localizedSelectOpts.complianceTypes}
                   value={formData.basicDetails.compliance}
                   onChange={(e) =>
                     updateSectionField('basicDetails', 'compliance', e.target.value)
                   }
                 />
                 <Select
-                  label="Assets type"
+                  label={t('complianceAssets.assetsType')}
                   required
-                  options={selectOpts.assetTypes}
+                  options={localizedSelectOpts.assetTypes}
                   value={formData.basicDetails.assetsType}
                   onChange={(e) =>
                     updateSectionField('basicDetails', 'assetsType', e.target.value)
@@ -1032,21 +1229,21 @@ export default function ComplianceAssetsPage({
               {/* SECTION 2: VEHICLE INFORMATION */}
               <FormSection
                 stepNumber="02"
-                title="Vehicle Information"
-                description="Bilingual registration plates, registered legal owner, serial reference, and chassis VIN."
+                title={t('complianceAssets.vehicleInfo')}
+                description={t('complianceAssets.vehicleInfoDesc')}
                 columns={2}
               >
                 <Select
-                  label="Language"
+                  label={t('complianceAssets.language')}
                   required
-                  options={selectOpts.languages}
+                  options={localizedSelectOpts.languages}
                   value={formData.vehicleInfo.language}
                   onChange={(e) =>
                     updateSectionField('vehicleInfo', 'language', e.target.value)
                   }
                 />
                 <Input
-                  label="Plate Number (English)"
+                  label={t('complianceAssets.plateNumberEn')}
                   required
                   placeholder="e.g., KSA 4829 RYD"
                   value={formData.vehicleInfo.plateNumberEn}
@@ -1056,7 +1253,7 @@ export default function ComplianceAssetsPage({
                   error={formErrors['vehicleInfo.plateNumberEn']}
                 />
                 <Input
-                  label="Plate Number (Arabic)"
+                  label={t('complianceAssets.plateNumberAr')}
                   required
                   placeholder="e.g., أ ب ج ٤٨٢٩"
                   value={formData.vehicleInfo.plateNumberAr}
@@ -1066,7 +1263,7 @@ export default function ComplianceAssetsPage({
                   error={formErrors['vehicleInfo.plateNumberAr']}
                 />
                 <Input
-                  label="Owner Name"
+                  label={t('complianceAssets.ownerName')}
                   required
                   placeholder="e.g., Advanced Tech Co."
                   value={formData.vehicleInfo.ownerName}
@@ -1076,7 +1273,7 @@ export default function ComplianceAssetsPage({
                   error={formErrors['vehicleInfo.ownerName']}
                 />
                 <Input
-                  label="Owner ID"
+                  label={t('complianceAssets.ownerId')}
                   required
                   placeholder="e.g., 7001928345"
                   value={formData.vehicleInfo.ownerId}
@@ -1086,7 +1283,7 @@ export default function ComplianceAssetsPage({
                   error={formErrors['vehicleInfo.ownerId']}
                 />
                 <Input
-                  label="Serial Number"
+                  label={t('complianceAssets.serialNumber')}
                   required
                   placeholder="e.g., SN-ACTROS-994120"
                   value={formData.vehicleInfo.serialNumber}
@@ -1097,7 +1294,7 @@ export default function ComplianceAssetsPage({
                 />
                 <div className="sm:col-span-2">
                   <Input
-                    label="VIN Number"
+                    label={t('complianceAssets.vinNumber')}
                     required
                     placeholder="e.g., WDB9634031L884920"
                     value={formData.vehicleInfo.vinNumber}
@@ -1113,21 +1310,21 @@ export default function ComplianceAssetsPage({
               {showDriverSection && (
                 <FormSection
                   stepNumber="03"
-                  title="Driver Information"
-                  description="Assigned operator identification and driving license copy."
+                  title={t('complianceAssets.driverInfo')}
+                  description={t('complianceAssets.driverInfoDesc')}
                   columns={2}
                 >
                   <Select
-                    label="Language"
+                    label={t('complianceAssets.language')}
                     required
-                    options={selectOpts.languages}
+                    options={localizedSelectOpts.languages}
                     value={formData.driverInfo.language}
                     onChange={(e) =>
                       updateSectionField('driverInfo', 'language', e.target.value)
                     }
                   />
                   <Input
-                    label="Driver ID"
+                    label={t('complianceAssets.driverId')}
                     required
                     placeholder="e.g., 1084920314"
                     value={formData.driverInfo.driverId}
@@ -1137,7 +1334,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['driverInfo.driverId']}
                   />
                   <Input
-                    label="Driver Name"
+                    label={t('complianceAssets.driverName')}
                     required
                     placeholder="e.g., Salman Al-Ghamdi"
                     value={formData.driverInfo.driverName}
@@ -1147,7 +1344,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['driverInfo.driverName']}
                   />
                   <FileCopyField
-                    label="Driver License Copy"
+                    label={t('complianceAssets.driverLicenseCopy')}
                     required
                     value={formData.driverInfo.driverLicenseCopy}
                     onChange={(val) =>
@@ -1155,6 +1352,7 @@ export default function ComplianceAssetsPage({
                     }
                     error={formErrors['driverInfo.driverLicenseCopy']}
                     placeholder="e.g., Driver_License_Copy.pdf"
+                    browseLabel={t('complianceAssets.browse')}
                   />
                 </FormSection>
               )}
@@ -1162,24 +1360,25 @@ export default function ComplianceAssetsPage({
               {/* SECTION 4: DOCUMENTS INFORMATION */}
               <FormSection
                 stepNumber="04"
-                title="Documents Information"
-                description="Select a compliance document template or adjust which document sections are active."
+                title={t('complianceAssets.documentsInfo')}
+                description={t('complianceAssets.documentsInfoDesc')}
                 columns={2}
               >
                 <Select
-                  label="Choose Template"
-                  options={selectOpts.templates}
+                  label={t('complianceAssets.chooseTemplate')}
+                  options={localizedSelectOpts.templates}
                   value={formData.documentsInfo.template}
                   onChange={(e) => handleTemplateChange(e.target.value)}
-                  description="Selecting a preset template automatically enables its corresponding document sections."
+                  description={t('complianceAssets.chooseTemplateDesc')}
                 />
                 <div className="flex flex-col justify-center gap-2">
                   <span className="text-xs font-semibold text-awn-text-primary">
-                    Selected Document Sections
+                    {t('complianceAssets.selectedDocSections')}
                   </span>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {docOptions.map((doc) => {
                       const active = selectedDocuments.includes(doc.id);
+                      const title = getComplianceDocTitle(doc.id);
                       return (
                         <button
                           key={doc.id}
@@ -1193,7 +1392,7 @@ export default function ComplianceAssetsPage({
                           }`}
                         >
                           {active && <Check className="w-3 h-3 shrink-0" />}
-                          <span>{doc.label}</span>
+                          <span>{title}</span>
                         </button>
                       );
                     })}
@@ -1205,14 +1404,14 @@ export default function ComplianceAssetsPage({
               {showRegistrationSection && (
                 <FormSection
                   stepNumber="05"
-                  title="Vehicle Registration Details"
-                  description="Statutory vehicle registration (Istimara) parameters, validity dates, and document copy."
+                  title={t('complianceAssets.registrationDetails')}
+                  description={t('complianceAssets.registrationDetailsDesc')}
                   columns={2}
                 >
                   <Select
-                    label="Registration Type"
+                    label={t('complianceAssets.registrationType')}
                     required
-                    options={selectOpts.registrationTypes}
+                    options={localizedSelectOpts.registrationTypes}
                     value={formData.registrationDetails.registrationType}
                     onChange={(e) =>
                       updateSectionField(
@@ -1223,9 +1422,9 @@ export default function ComplianceAssetsPage({
                     }
                   />
                   <Select
-                    label="Vehicle Category"
+                    label={t('complianceAssets.vehicleCategory')}
                     required
-                    options={selectOpts.vehicleCategories}
+                    options={localizedSelectOpts.vehicleCategories}
                     value={formData.registrationDetails.vehicleCategory}
                     onChange={(e) =>
                       updateSectionField(
@@ -1236,7 +1435,7 @@ export default function ComplianceAssetsPage({
                     }
                   />
                   <Input
-                    label="Brand"
+                    label={t('complianceAssets.brand')}
                     required
                     placeholder="e.g., Mercedes-Benz Actros 2645"
                     value={formData.registrationDetails.brand}
@@ -1246,7 +1445,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['registrationDetails.brand']}
                   />
                   <Input
-                    label="Color"
+                    label={t('complianceAssets.color')}
                     required
                     placeholder="e.g., White"
                     value={formData.registrationDetails.color}
@@ -1256,7 +1455,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['registrationDetails.color']}
                   />
                   <Input
-                    label="Registration Issue Date"
+                    label={t('complianceAssets.registrationIssueDate')}
                     type="date"
                     required
                     value={formData.registrationDetails.registrationIssueDate}
@@ -1270,7 +1469,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['registrationDetails.registrationIssueDate']}
                   />
                   <Input
-                    label="Registration Validity Date"
+                    label={t('complianceAssets.registrationValidityDate')}
                     type="date"
                     required
                     value={formData.registrationDetails.registrationValidityDate}
@@ -1284,7 +1483,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['registrationDetails.registrationValidityDate']}
                   />
                   <Input
-                    label="Manufacturing Year"
+                    label={t('complianceAssets.manufacturingYear')}
                     required
                     placeholder="e.g., 2026"
                     value={formData.registrationDetails.manufacturingYear}
@@ -1297,7 +1496,7 @@ export default function ComplianceAssetsPage({
                     }
                   />
                   <FileCopyField
-                    label="Registration Copy"
+                    label={t('complianceAssets.registrationCopy')}
                     required
                     value={formData.registrationDetails.registrationCopy}
                     onChange={(val) =>
@@ -1305,6 +1504,7 @@ export default function ComplianceAssetsPage({
                     }
                     error={formErrors['registrationDetails.registrationCopy']}
                     placeholder="e.g., Istimara_Registration_Copy.pdf"
+                    browseLabel={t('complianceAssets.browse')}
                   />
                 </FormSection>
               )}
@@ -1313,12 +1513,12 @@ export default function ComplianceAssetsPage({
               {showFitnessSection && (
                 <FormSection
                   stepNumber="06"
-                  title="Fitness Details"
-                  description="Periodic technical inspection (MVPI) certificate reference, validity window, and document copy."
+                  title={t('complianceAssets.fitnessDetails')}
+                  description={t('complianceAssets.fitnessDetailsDesc')}
                   columns={2}
                 >
                   <Input
-                    label="Fitness Name"
+                    label={t('complianceAssets.fitnessName')}
                     required
                     placeholder="e.g., MVPI Periodic Technical Inspection"
                     value={formData.fitnessDetails.fitnessName}
@@ -1328,7 +1528,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['fitnessDetails.fitnessName']}
                   />
                   <Input
-                    label="Fitness Number"
+                    label={t('complianceAssets.fitnessNumber')}
                     required
                     placeholder="e.g., MVPI-RYD-2026-88412"
                     value={formData.fitnessDetails.fitnessNumber}
@@ -1338,7 +1538,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['fitnessDetails.fitnessNumber']}
                   />
                   <Input
-                    label="Fitness Validity Date"
+                    label={t('complianceAssets.fitnessValidityDate')}
                     type="date"
                     value={formData.fitnessDetails.fitnessValidityDate}
                     onChange={(e) =>
@@ -1350,7 +1550,7 @@ export default function ComplianceAssetsPage({
                     }
                   />
                   <Input
-                    label="Expiry Date"
+                    label={t('complianceAssets.expiryDate')}
                     type="date"
                     required
                     value={formData.fitnessDetails.expiryDate}
@@ -1360,7 +1560,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['fitnessDetails.expiryDate']}
                   />
                   <Input
-                    label="Renewal Date"
+                    label={t('complianceAssets.renewalDate')}
                     type="date"
                     value={formData.fitnessDetails.renewalDate}
                     onChange={(e) =>
@@ -1368,7 +1568,7 @@ export default function ComplianceAssetsPage({
                     }
                   />
                   <FileCopyField
-                    label="Fitness Document Copy"
+                    label={t('complianceAssets.fitnessDocumentCopy')}
                     required
                     value={formData.fitnessDetails.fitnessDocumentCopy}
                     onChange={(val) =>
@@ -1376,6 +1576,7 @@ export default function ComplianceAssetsPage({
                     }
                     error={formErrors['fitnessDetails.fitnessDocumentCopy']}
                     placeholder="e.g., MVPI_Fitness_Certificate.pdf"
+                    browseLabel={t('complianceAssets.browse')}
                   />
                 </FormSection>
               )}
@@ -1384,12 +1585,12 @@ export default function ComplianceAssetsPage({
               {showInsuranceSection && (
                 <FormSection
                   stepNumber="07"
-                  title="Insurance Information"
-                  description="Motor/asset insurance policy coverage details, validity dates, and document copy."
+                  title={t('complianceAssets.insuranceInfo')}
+                  description={t('complianceAssets.insuranceInfoDesc')}
                   columns={2}
                 >
                   <Input
-                    label="Policy Name"
+                    label={t('complianceAssets.policyName')}
                     required
                     placeholder="e.g., Tawuniya Commercial Fleet Master Policy"
                     value={formData.insuranceInfo.policyName}
@@ -1399,7 +1600,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['insuranceInfo.policyName']}
                   />
                   <Input
-                    label="Insurance Policy Number"
+                    label={t('complianceAssets.insurancePolicyNumber')}
                     required
                     placeholder="e.g., POL-TAW-2026-99301"
                     value={formData.insuranceInfo.insurancePolicyNumber}
@@ -1413,16 +1614,16 @@ export default function ComplianceAssetsPage({
                     error={formErrors['insuranceInfo.insurancePolicyNumber']}
                   />
                   <Select
-                    label="Insurance Type"
+                    label={t('complianceAssets.insuranceType')}
                     required
-                    options={selectOpts.insuranceTypes}
+                    options={localizedSelectOpts.insuranceTypes}
                     value={formData.insuranceInfo.insuranceType}
                     onChange={(e) =>
                       updateSectionField('insuranceInfo', 'insuranceType', e.target.value)
                     }
                   />
                   <Input
-                    label="Insurance Issue"
+                    label={t('complianceAssets.insuranceIssue')}
                     type="date"
                     value={formData.insuranceInfo.insuranceIssue}
                     onChange={(e) =>
@@ -1430,7 +1631,7 @@ export default function ComplianceAssetsPage({
                     }
                   />
                   <Input
-                    label="Insurance Validity"
+                    label={t('complianceAssets.insuranceValidity')}
                     type="date"
                     required
                     value={formData.insuranceInfo.insuranceValidity}
@@ -1444,7 +1645,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['insuranceInfo.insuranceValidity']}
                   />
                   <Input
-                    label="Renewal Date"
+                    label={t('complianceAssets.renewalDate')}
                     type="date"
                     value={formData.insuranceInfo.renewalDate}
                     onChange={(e) =>
@@ -1453,7 +1654,7 @@ export default function ComplianceAssetsPage({
                   />
                   <div className="sm:col-span-2">
                     <FileCopyField
-                      label="Operations Card Copy"
+                      label={t('complianceAssets.operationsCardCopy')}
                       required
                       value={formData.insuranceInfo.operationsCardCopy}
                       onChange={(val) =>
@@ -1461,6 +1662,7 @@ export default function ComplianceAssetsPage({
                       }
                       error={formErrors['insuranceInfo.operationsCardCopy']}
                       placeholder="e.g., Insurance_Policy_Schedule.pdf"
+                      browseLabel={t('complianceAssets.browse')}
                     />
                   </div>
                 </FormSection>
@@ -1470,12 +1672,12 @@ export default function ComplianceAssetsPage({
               {showOperationsCardSection && (
                 <FormSection
                   stepNumber="08"
-                  title="Operations Card Info"
-                  description="Transport General Authority (TGA) or operational permit card details, validity dates, and copy."
+                  title={t('complianceAssets.operationsCardInfo')}
+                  description={t('complianceAssets.operationsCardInfoDesc')}
                   columns={2}
                 >
                   <Input
-                    label="Card Name"
+                    label={t('complianceAssets.cardName')}
                     required
                     placeholder="e.g., TGA Commercial Transport Operations Card"
                     value={formData.operationsCardInfo.cardName}
@@ -1485,7 +1687,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['operationsCardInfo.cardName']}
                   />
                   <Input
-                    label="Card Number"
+                    label={t('complianceAssets.cardNumber')}
                     required
                     placeholder="e.g., TGA-OP-2026-55190"
                     value={formData.operationsCardInfo.cardNumber}
@@ -1495,7 +1697,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['operationsCardInfo.cardNumber']}
                   />
                   <Input
-                    label="Issue Date"
+                    label={t('complianceAssets.issueDate')}
                     type="date"
                     required
                     value={formData.operationsCardInfo.issueDate}
@@ -1505,7 +1707,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['operationsCardInfo.issueDate']}
                   />
                   <Input
-                    label="Expiry Date"
+                    label={t('complianceAssets.expiryDate')}
                     type="date"
                     required
                     value={formData.operationsCardInfo.expiryDate}
@@ -1515,7 +1717,7 @@ export default function ComplianceAssetsPage({
                     error={formErrors['operationsCardInfo.expiryDate']}
                   />
                   <Input
-                    label="Renewal Date"
+                    label={t('complianceAssets.renewalDate')}
                     type="date"
                     value={formData.operationsCardInfo.renewalDate}
                     onChange={(e) =>
@@ -1527,7 +1729,7 @@ export default function ComplianceAssetsPage({
                     }
                   />
                   <FileCopyField
-                    label="Operations Card Copy"
+                    label={t('complianceAssets.operationsCardCopy')}
                     required
                     value={formData.operationsCardInfo.operationsCardCopy}
                     onChange={(val) =>
@@ -1539,6 +1741,7 @@ export default function ComplianceAssetsPage({
                     }
                     error={formErrors['operationsCardInfo.operationsCardCopy']}
                     placeholder="e.g., TGA_Operations_Card_Copy.pdf"
+                    browseLabel={t('complianceAssets.browse')}
                   />
                 </FormSection>
               )}
@@ -1548,8 +1751,7 @@ export default function ComplianceAssetsPage({
           {/* FORM FOOTER ACTIONS: Go Back | Save as Draft | Submit */}
           <div className="bg-awn-surface border border-awn-border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="text-xs text-awn-text-secondary">
-              Going back preserves your entered values. Submitting validates required fields and transitions to{' '}
-              <strong className="text-awn-text-primary">Asset Details</strong>.
+              {t('complianceAssets.formNotice')}
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2.5">
@@ -1558,7 +1760,7 @@ export default function ComplianceAssetsPage({
                 onClick={() => setFlowStep('choose-documents')}
                 disabled={submitting}
               >
-                Go Back
+                {t('complianceAssets.goBack')}
               </Button>
               <Button
                 variant="gold"
@@ -1566,7 +1768,7 @@ export default function ComplianceAssetsPage({
                 onClick={handleSaveAsDraft}
                 loading={submitting}
               >
-                Save as Draft
+                {t('complianceAssets.saveAsDraft')}
               </Button>
               <Button
                 type="submit"
@@ -1574,7 +1776,7 @@ export default function ComplianceAssetsPage({
                 leftIcon={<CheckCircle2 className="w-4 h-4" />}
                 loading={submitting}
               >
-                Submit
+                {t('complianceAssets.submit')}
               </Button>
             </div>
           </div>
@@ -1651,10 +1853,16 @@ export default function ComplianceAssetsPage({
             <Button
               variant="ghost"
               size="sm"
-              leftIcon={<ArrowLeft className="w-4 h-4" />}
+              leftIcon={
+                isRtl ? (
+                  <ArrowRight className="w-4 h-4" />
+                ) : (
+                  <ArrowLeft className="w-4 h-4" />
+                )
+              }
               onClick={() => setFlowStep('list')}
             >
-              Back to Compliance Assets
+              {t('complianceAssets.backToComplianceAssets')}
             </Button>
             <span className="text-awn-text-muted text-xs">·</span>
             <button
@@ -1662,11 +1870,11 @@ export default function ComplianceAssetsPage({
               onClick={() => onNavigate('/assets/registry')}
               className="text-xs text-awn-text-secondary hover:text-awn-primary cursor-pointer"
             >
-              Main Assets Workspace
+              {t('complianceAssets.mainAssetsWorkspace')}
             </button>
           </div>
           <span className="text-xs font-mono text-awn-text-muted tabular-nums">
-            Asset ID: {activeAsset.code}
+            {t('complianceAssets.assetIdLabel')}: {activeAsset.code}
           </span>
         </div>
 
@@ -1709,15 +1917,15 @@ export default function ComplianceAssetsPage({
               size="sm"
               onClick={() => setLastSubmissionBanner(null)}
             >
-              Dismiss
+              {t('complianceAssets.dismiss')}
             </Button>
           </div>
         )}
 
         {/* Asset Details Header with Status & Required Actions */}
         <PageHeader
-          title="Asset Details"
-          description={`${activeAsset.code} · ${reg.brand || basic.assetsType || 'Compliance Asset'} · Plate: ${vehicle.plateNumberEn || '—'} (${vehicle.plateNumberAr || '—'})`}
+          title={t('complianceAssets.assetDetailsTitle')}
+          description={`${activeAsset.code} · ${reg.brand || basic.assetsType || 'Compliance Asset'} · ${t('complianceAssets.plateNumber')}: ${vehicle.plateNumberEn || '—'} (${vehicle.plateNumberAr || '—'})`}
           secondaryActions={
             !isRetired && (
               <Button
@@ -1726,7 +1934,7 @@ export default function ComplianceAssetsPage({
                 leftIcon={<Ban className="w-4 h-4" />}
                 onClick={() => setRetireDialogOpen(true)}
               >
-                Retire / Deactivate Asset
+                {t('complianceAssets.retireDeactivateAsset')}
               </Button>
             )
           }
@@ -1737,12 +1945,12 @@ export default function ComplianceAssetsPage({
               leftIcon={<Pencil className="w-4 h-4" />}
               onClick={() => handleEditExistingAsset(activeAsset)}
             >
-              Edit Asset
+              {t('complianceAssets.editAsset')}
             </Button>
           }
         />
 
-        {/* Enterprise Entity & Status Overview Card (Advanced Tech Co. | CR-1040123486 | Unified ID | Status: Active) */}
+        {/* Enterprise Entity & Status Overview Card */}
         <div className="bg-awn-surface border border-awn-border rounded-lg p-5">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-start gap-3.5">
@@ -1765,21 +1973,21 @@ export default function ComplianceAssetsPage({
                         ? 'Retired'
                         : isDraft
                         ? 'Draft'
-                        : `Status: ${displayStatusLabel}`
+                        : displayStatusLabel
                     }
                     tone={activeAsset.statusTone}
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-awn-text-secondary mt-1.5">
                   <span>
-                    CR Number:{' '}
+                    {t('complianceAssets.crNumber')}:{' '}
                     <strong className="font-mono text-awn-text-primary tabular-nums">
                       {activeAsset.crNumber || 'CR-1040123486'}
                     </strong>
                   </span>
                   <span>·</span>
                   <span>
-                    Unified ID:{' '}
+                    {t('complianceAssets.unifiedId')}:{' '}
                     <strong className="font-mono text-awn-text-primary tabular-nums">
                       {activeAsset.unifiedId ||
                         (vehicle.ownerId ? `UNIFIED-${vehicle.ownerId}` : 'UNIFIED-7001928345')}
@@ -1787,26 +1995,36 @@ export default function ComplianceAssetsPage({
                   </span>
                   <span>·</span>
                   <span>
-                    Asset Identifier:{' '}
+                    {t('complianceAssets.assetIdLabel')}:{' '}
                     <strong className="font-mono text-awn-text-primary tabular-nums">
                       {activeAsset.code}
                     </strong>
                   </span>
                   <span>·</span>
                   <span>
-                    Status:{' '}
+                    {t('complianceAssets.colStatus')}:{' '}
                     <strong className="text-awn-text-primary">
-                      {displayStatusLabel}
+                      {isRtl
+                        ? isRetired
+                          ? t('complianceAssets.filterRetired')
+                          : isDraft
+                          ? t('complianceAssets.filterDraft')
+                          : t('complianceAssets.filterActive')
+                        : displayStatusLabel}
                     </strong>
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="text-xs text-awn-text-muted font-mono tabular-nums md:text-right">
-              <div>Last Updated: {activeAsset.updatedAt}</div>
+            <div className="text-xs text-awn-text-muted font-mono tabular-nums md:text-right rtl:md:text-left">
+              <div>
+                {t('complianceAssets.lastUpdated')}: {activeAsset.updatedAt}
+              </div>
               <div className="mt-0.5">
-                {activeAsset.selectedDocuments?.length || 0} Compliance Documents Active
+                {t('complianceAssets.activeComplianceDocs', {
+                  count: formatNumber(activeAsset.selectedDocuments?.length || 0),
+                })}
               </div>
             </div>
           </div>
@@ -1815,40 +2033,40 @@ export default function ComplianceAssetsPage({
         {/* Information Sections Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* 1. Basic Details */}
-          <Card title="Basic Details">
+          <Card title={t('complianceAssets.basicDetails')}>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 text-xs">
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Language</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.language')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {basic.language || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Customer</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.customer')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {basic.customer || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Business</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.business')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {basic.business || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Assets Category</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.assetsCategory')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {basic.assetsCategory || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Compliance</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.compliance')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {basic.compliance || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Assets type</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.assetsType')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {basic.assetsType || '—'}
                 </dd>
@@ -1857,46 +2075,46 @@ export default function ComplianceAssetsPage({
           </Card>
 
           {/* 2. Basic Vehicle Information */}
-          <Card title="Basic Vehicle Information">
+          <Card title={t('complianceAssets.basicVehicleInfo')}>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 text-xs">
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Language</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.language')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {vehicle.language || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Plate Number (English)</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.plateNumberEn')}</dt>
                 <dd className="font-mono font-semibold text-awn-text-primary mt-1 tabular-nums">
                   {vehicle.plateNumberEn || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Plate Number (Arabic)</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.plateNumberAr')}</dt>
                 <dd className="font-semibold text-awn-text-primary mt-1">
                   {vehicle.plateNumberAr || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Owner Name</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.ownerName')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {vehicle.ownerName || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Owner ID</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.ownerId')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {vehicle.ownerId || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Serial Number</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.serialNumber')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {vehicle.serialNumber || '—'}
                 </dd>
               </div>
               <div className="sm:col-span-2">
-                <dt className="text-awn-text-muted">VIN Number</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.vinNumber')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {vehicle.vinNumber || '—'}
                 </dd>
@@ -1905,216 +2123,216 @@ export default function ComplianceAssetsPage({
           </Card>
 
           {/* 3. Driver Information */}
-          <Card title="Driver Information">
+          <Card title={t('complianceAssets.driverInfo')}>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 text-xs">
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Language</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.language')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {driver.language || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Driver ID</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.driverId')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {driver.driverId || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Driver Name</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.driverName')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {driver.driverName || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Driver License Copy</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.driverLicenseCopy')}</dt>
                 <dd className="font-medium text-awn-primary mt-1 truncate">
-                  {driver.driverLicenseCopy || 'Not attached'}
+                  {driver.driverLicenseCopy || t('complianceAssets.notAttached')}
                 </dd>
               </div>
             </dl>
           </Card>
 
           {/* 4. Vehicle Registration Details */}
-          <Card title="Vehicle Registration Details">
+          <Card title={t('complianceAssets.registrationDetails')}>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 text-xs">
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Registration Type</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.registrationType')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {reg.registrationType || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Vehicle Category</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.vehicleCategory')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {reg.vehicleCategory || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Brand</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.brand')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {reg.brand || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Color</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.color')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {reg.color || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Registration Issue Date</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.registrationIssueDate')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {reg.registrationIssueDate || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Registration Validity Date</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.registrationValidityDate')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {reg.registrationValidityDate || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Manufacturing Year</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.manufacturingYear')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {reg.manufacturingYear || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Registration Copy</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.registrationCopy')}</dt>
                 <dd className="font-medium text-awn-primary mt-1 truncate">
-                  {reg.registrationCopy || 'Not attached'}
+                  {reg.registrationCopy || t('complianceAssets.notAttached')}
                 </dd>
               </div>
             </dl>
           </Card>
 
           {/* 5. Fitness Details */}
-          <Card title="Fitness Details">
+          <Card title={t('complianceAssets.fitnessDetails')}>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 text-xs">
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Fitness Name</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.fitnessName')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {fitness.fitnessName || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Fitness Number</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.fitnessNumber')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {fitness.fitnessNumber || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Fitness Validity Date</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.fitnessValidityDate')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {fitness.fitnessValidityDate || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Expiry Date</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.expiryDate')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {fitness.expiryDate || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Renewal Date</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.renewalDate')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {fitness.renewalDate || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Fitness Document Copy</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.fitnessDocumentCopy')}</dt>
                 <dd className="font-medium text-awn-primary mt-1 truncate">
-                  {fitness.fitnessDocumentCopy || 'Not attached'}
+                  {fitness.fitnessDocumentCopy || t('complianceAssets.notAttached')}
                 </dd>
               </div>
             </dl>
           </Card>
 
           {/* 6. Insurance Information */}
-          <Card title="Insurance Information">
+          <Card title={t('complianceAssets.insuranceInfo')}>
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 text-xs">
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Policy Name</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.policyName')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {ins.policyName || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Insurance Policy Number</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.insurancePolicyNumber')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {ins.insurancePolicyNumber || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Insurance Type</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.insuranceType')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {ins.insuranceType || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Insurance Issue</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.insuranceIssue')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {ins.insuranceIssue || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Insurance Validity</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.insuranceValidity')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {ins.insuranceValidity || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Renewal Date</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.renewalDate')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {ins.renewalDate || '—'}
                 </dd>
               </div>
               <div className="sm:col-span-2 pt-2 border-t border-awn-border">
-                <dt className="text-awn-text-muted">Operations Card Copy</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.operationsCardCopy')}</dt>
                 <dd className="font-medium text-awn-primary mt-1 truncate">
-                  {ins.operationsCardCopy || 'Not attached'}
+                  {ins.operationsCardCopy || t('complianceAssets.notAttached')}
                 </dd>
               </div>
             </dl>
           </Card>
 
           {/* 7. Operations Card Information */}
-          <Card title="Operations Card Information" className="lg:col-span-2">
+          <Card title={t('complianceAssets.operationsCardInfo')} className="lg:col-span-2">
             <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3.5 text-xs">
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Card Name</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.cardName')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
                   {ops.cardName || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Card Number</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.cardNumber')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {ops.cardNumber || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Issue Date</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.issueDate')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {ops.issueDate || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Expiry Date</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.expiryDate')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {ops.expiryDate || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Renewal Date</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.renewalDate')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
                   {ops.renewalDate || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Operations Card Copy</dt>
+                <dt className="text-awn-text-muted">{t('complianceAssets.operationsCardCopy')}</dt>
                 <dd className="font-medium text-awn-primary mt-1 truncate">
-                  {ops.operationsCardCopy || 'Not attached'}
+                  {ops.operationsCardCopy || t('complianceAssets.notAttached')}
                 </dd>
               </div>
             </dl>
@@ -2123,20 +2341,32 @@ export default function ComplianceAssetsPage({
 
         {/* 8. ASSET DOCUMENT MATRIX */}
         <Card
-          title="Asset Document Matrix"
-          description="Consolidated statutory document verification ledger across Driver License, Registration, Fitness Card, Insurance Policy, and Operations Card."
+          title={t('complianceAssets.documentMatrixTitle')}
+          description={t('complianceAssets.documentMatrixDesc')}
           noPadding
         >
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left rtl:text-right border-collapse">
               <thead>
                 <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                  <th className="py-3 px-4 whitespace-nowrap">Document Name</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Number/Reference</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Issue Date</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Expiry Date</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Renewal Date</th>
-                  <th className="py-3 px-4 whitespace-nowrap text-right">File Copy</th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('complianceAssets.colDocName')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('complianceAssets.colNumberRef')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('complianceAssets.colIssueDate')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('complianceAssets.colExpiryDate')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('complianceAssets.colRenewalDate')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
+                    {t('complianceAssets.colFileCopy')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-awn-border text-sm">
@@ -2146,7 +2376,7 @@ export default function ComplianceAssetsPage({
                     className="hover:bg-awn-surface-alt transition-colors"
                   >
                     <td className="py-3 px-4 font-medium text-awn-text-primary whitespace-nowrap">
-                      {row.documentName}
+                      {getMatrixDocName(row.documentName)}
                     </td>
                     <td className="py-3 px-4 font-mono text-xs text-awn-text-primary whitespace-nowrap tabular-nums">
                       {row.numberReference}
@@ -2160,14 +2390,14 @@ export default function ComplianceAssetsPage({
                     <td className="py-3 px-4 font-mono text-xs text-awn-text-secondary whitespace-nowrap tabular-nums">
                       {row.renewalDate}
                     </td>
-                    <td className="py-3 px-4 whitespace-nowrap text-right">
+                    <td className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
                       {row.fileCopy ? (
                         <button
                           type="button"
                           onClick={() =>
                             showToast({
-                              title: `Opening ${row.documentName} Copy`,
-                              description: `Previewing file: ${row.fileCopy}`,
+                              title: `${getMatrixDocName(row.documentName)}`,
+                              description: `${row.fileCopy}`,
                               variant: 'info',
                             })
                           }
@@ -2177,7 +2407,9 @@ export default function ComplianceAssetsPage({
                           <span>{row.fileCopy}</span>
                         </button>
                       ) : (
-                        <span className="text-xs text-awn-text-muted">Not uploaded</span>
+                        <span className="text-xs text-awn-text-muted">
+                          {t('complianceAssets.notUploaded')}
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -2191,7 +2423,7 @@ export default function ComplianceAssetsPage({
         <Modal
           isOpen={successModalOpen}
           onClose={() => setSuccessModalOpen(false)}
-          title="Asset Added Successfully!"
+          title={t('complianceAssets.assetAddedSuccess')}
           size="sm"
           footer={
             <>
@@ -2202,13 +2434,13 @@ export default function ComplianceAssetsPage({
                   onNavigate('/assets/registry');
                 }}
               >
-                Go to Assets Workspace
+                {t('complianceAssets.goToAssetsWorkspace')}
               </Button>
               <Button
                 variant="primary"
                 onClick={() => setSuccessModalOpen(false)}
               >
-                View Asset Details
+                {t('complianceAssets.viewAssetDetails')}
               </Button>
             </>
           }
@@ -2219,10 +2451,18 @@ export default function ComplianceAssetsPage({
             </div>
             <div className="space-y-2">
               <p className="text-sm text-awn-text-primary leading-relaxed">
-                The asset has been recorded in the system. You can now assign it to an employee, track its status, and manage it from the Assets dashboard.
+                {t('complianceAssets.assetAddedDesc')}
               </p>
               <div className="p-2.5 rounded-md bg-awn-surface-alt border border-awn-border text-xs font-mono text-awn-text-secondary tabular-nums">
-                {activeAsset.code} · {reg.brand || basic.assetsType} · Status: {displayStatusLabel}
+                {activeAsset.code} · {reg.brand || basic.assetsType} ·{' '}
+                {t('complianceAssets.colStatus')}:{' '}
+                {isRtl
+                  ? isRetired
+                    ? t('complianceAssets.filterRetired')
+                    : isDraft
+                    ? t('complianceAssets.filterDraft')
+                    : t('complianceAssets.filterActive')
+                  : displayStatusLabel}
               </div>
             </div>
           </div>
@@ -2233,15 +2473,16 @@ export default function ComplianceAssetsPage({
           isOpen={retireDialogOpen}
           onClose={() => setRetireDialogOpen(false)}
           onConfirm={handleConfirmRetire}
-          title="Retire / Deactivate Asset"
-          description="Confirming this action will transition this Compliance Asset to Retired status and deactivate its operational dispatch eligibility."
-          itemSummary={`${activeAsset.code} — ${reg.brand || basic.assetsType} (${vehicle.plateNumberEn || 'No Plate'})`}
-          confirmLabel="Confirm Retire / Deactivate"
+          title={t('complianceAssets.confirmRetireTitle')}
+          description={t('complianceAssets.confirmRetireDesc')}
+          itemSummary={`${activeAsset.code} — ${reg.brand || basic.assetsType} (${vehicle.plateNumberEn || t('complianceAssets.noPlate')})`}
+          confirmLabel={t('complianceAssets.confirmRetireButton')}
+          cancelLabel={t('complianceAssets.cancel')}
           loading={submitting}
         >
           <Input
-            label="Reason for Retirement / Deactivation"
-            placeholder="e.g., End of statutory service life or fleet replacement"
+            label={t('complianceAssets.retireReasonLabel')}
+            placeholder={t('complianceAssets.retireReasonPlaceholder')}
             value={retireReason}
             onChange={(e) => setRetireReason(e.target.value)}
           />
@@ -2256,16 +2497,22 @@ export default function ComplianceAssetsPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Compliance Assets"
-        description="Manage company assets governed by statutory, regulatory, vehicle registration, fitness, insurance, and operations card mandates."
+        title={t('complianceAssets.title')}
+        description={t('complianceAssets.description')}
         secondaryActions={
           <Button
             variant="outline"
             size="md"
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={
+              isRtl ? (
+                <ArrowRight className="w-4 h-4" />
+              ) : (
+                <ArrowLeft className="w-4 h-4" />
+              )
+            }
             onClick={() => onNavigate('/assets/registry')}
           >
-            Back to Assets
+            {t('complianceAssets.backToAssets')}
           </Button>
         }
         primaryAction={
@@ -2275,7 +2522,7 @@ export default function ComplianceAssetsPage({
             leftIcon={<Plus className="w-4 h-4" />}
             onClick={handleStartNewComplianceAsset}
           >
-            New Compliance Asset
+            {t('complianceAssets.newComplianceAsset')}
           </Button>
         }
       />
@@ -2285,12 +2532,12 @@ export default function ComplianceAssetsPage({
         <div className="p-4 border-b border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="Search by code, plate, VIN, driver, customer..."
+              placeholder={t('complianceAssets.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onClear={() => setSearchQuery('')}
               leftIcon={<Search className="w-4 h-4" />}
-              aria-label="Search compliance assets"
+              aria-label={t('complianceAssets.searchAria')}
             />
           </div>
 
@@ -2312,7 +2559,7 @@ export default function ComplianceAssetsPage({
                       : 'text-awn-text-secondary hover:text-awn-text-primary'
                   }`}
                 >
-                  {st === 'ALL' ? 'All' : st}
+                  {getFilterLabel(st)}
                 </button>
               );
             })}
@@ -2323,22 +2570,34 @@ export default function ComplianceAssetsPage({
           <TableSkeleton rows={4} columns={6} />
         ) : complianceList.length === 0 ? (
           <EmptyState
-            title="No Compliance Assets Found"
-            description="Start the Compliance Asset flow to choose required documents and register a new compliance asset."
-            primaryActionLabel="New Compliance Asset"
+            title={t('complianceAssets.noAssetsFound')}
+            description={t('complianceAssets.noAssetsDesc')}
+            primaryActionLabel={t('complianceAssets.newComplianceAsset')}
             onPrimaryAction={handleStartNewComplianceAsset}
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left rtl:text-right border-collapse">
               <thead>
                 <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                  <th className="py-3 px-4 whitespace-nowrap">Asset ID</th>
-                  <th className="py-3 px-4">Vehicle / Asset & Plate</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Customer & Business</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Assigned Driver</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Status</th>
-                  <th className="py-3 px-4 whitespace-nowrap text-right">Actions</th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('complianceAssets.colAssetId')}
+                  </th>
+                  <th className="py-3 px-4">
+                    {t('complianceAssets.colVehicleAssetPlate')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('complianceAssets.colCustomerBusiness')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('complianceAssets.colAssignedDriver')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('complianceAssets.colStatus')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
+                    {t('complianceAssets.colActions')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-awn-border text-sm">
@@ -2356,21 +2615,23 @@ export default function ComplianceAssetsPage({
                         {item.code}
                       </button>
                       <div className="text-[11px] text-awn-text-muted mt-0.5">
-                        {item.selectedDocuments?.length || 0} Documents Linked
+                        {t('complianceAssets.docsLinked', {
+                          count: formatNumber(item.selectedDocuments?.length || 0),
+                        })}
                       </div>
                     </td>
                     <td className="py-3.5 px-4 align-middle">
                       <button
                         type="button"
                         onClick={() => handleOpenAssetDetails(item)}
-                        className="font-medium text-awn-text-primary hover:text-awn-primary text-left cursor-pointer"
+                        className="font-medium text-awn-text-primary hover:text-awn-primary text-left rtl:text-right cursor-pointer"
                       >
                         {item.registrationDetails?.brand ||
                           item.basicDetails?.assetsType ||
                           'Compliance Asset'}
                       </button>
                       <div className="text-xs text-awn-text-muted mt-0.5 font-mono tabular-nums">
-                        {item.vehicleInfo?.plateNumberEn || 'No Plate'} ·{' '}
+                        {item.vehicleInfo?.plateNumberEn || t('complianceAssets.noPlate')} ·{' '}
                         {item.vehicleInfo?.plateNumberAr || '—'} · VIN:{' '}
                         {item.vehicleInfo?.vinNumber || '—'}
                       </div>
@@ -2385,7 +2646,7 @@ export default function ComplianceAssetsPage({
                     </td>
                     <td className="py-3.5 px-4 align-middle whitespace-nowrap">
                       <div className="text-xs font-medium text-awn-text-primary">
-                        {item.driverInfo?.driverName || 'Unassigned'}
+                        {item.driverInfo?.driverName || t('complianceAssets.unassigned')}
                       </div>
                       <div className="text-xs text-awn-text-muted font-mono tabular-nums mt-0.5">
                         ID: {item.driverInfo?.driverId || '—'}
@@ -2394,7 +2655,7 @@ export default function ComplianceAssetsPage({
                     <td className="py-3.5 px-4 align-middle whitespace-nowrap">
                       <StatusBadge label={item.status} tone={item.statusTone} />
                     </td>
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right">
+                    <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right rtl:text-left">
                       <div className="inline-flex items-center justify-end gap-1.5">
                         <Button
                           variant="outline"
@@ -2402,7 +2663,7 @@ export default function ComplianceAssetsPage({
                           leftIcon={<Eye className="w-3.5 h-3.5" />}
                           onClick={() => handleOpenAssetDetails(item)}
                         >
-                          Asset Details
+                          {t('complianceAssets.assetDetails')}
                         </Button>
                         <Button
                           variant={item.status === 'Draft' ? 'gold' : 'outline'}
@@ -2410,7 +2671,9 @@ export default function ComplianceAssetsPage({
                           leftIcon={<Pencil className="w-3.5 h-3.5" />}
                           onClick={() => handleEditExistingAsset(item)}
                         >
-                          {item.status === 'Draft' ? 'Continue Draft' : 'Edit'}
+                          {item.status === 'Draft'
+                            ? t('complianceAssets.continueDraft')
+                            : t('complianceAssets.edit')}
                         </Button>
                       </div>
                     </td>

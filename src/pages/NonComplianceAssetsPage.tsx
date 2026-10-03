@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
+  ArrowRight,
   Ban,
   Building2,
   Check,
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react';
 import { assetModuleService } from '../services/assetModuleService.ts';
 import { useToast } from '../hooks/useToast.tsx';
+import { useLanguage } from '../hooks/useLanguage.tsx';
 import { PageHeader } from '../components/ui/PageHeader.tsx';
 import { Button } from '../components/ui/Button.tsx';
 import { Card } from '../components/ui/Card.tsx';
@@ -101,6 +103,7 @@ interface UploadDocumentFieldProps {
   error?: string;
   required?: boolean;
   placeholder?: string;
+  uploadButtonLabel?: string;
 }
 
 /**
@@ -113,6 +116,7 @@ function UploadDocumentField({
   error,
   required = false,
   placeholder = 'e.g., FitnessCard.pdf',
+  uploadButtonLabel = 'Upload Document',
 }: UploadDocumentFieldProps) {
   const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -139,7 +143,7 @@ function UploadDocumentField({
         </div>
         <label className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-awn-surface-alt border border-awn-border hover:border-awn-border-strong text-xs font-medium text-awn-text-primary cursor-pointer shrink-0 transition-colors">
           <Upload className="w-3.5 h-3.5 text-awn-primary" aria-hidden="true" />
-          <span>Upload Document</span>
+          <span>{uploadButtonLabel}</span>
           <input
             type="file"
             className="sr-only"
@@ -167,6 +171,8 @@ function NonComplianceProgressHeader({
   onStepClick,
   isEditingExisting,
 }: NonComplianceProgressHeaderProps) {
+  const { t } = useLanguage();
+
   const steps: Array<{
     id: NonComplianceFlowStep;
     stepNum: string;
@@ -176,20 +182,22 @@ function NonComplianceProgressHeader({
     {
       id: 'add-form',
       stepNum: '01',
-      label: isEditingExisting ? 'Edit Non-Compliance Asset' : 'Add New Non-Compliance',
-      subtitle: 'Basic details, identification & documents',
+      label: isEditingExisting
+        ? t('nonComplianceAssets.step1Edit')
+        : t('nonComplianceAssets.step1'),
+      subtitle: t('nonComplianceAssets.step1Subtitle'),
     },
     {
       id: 'choose-documents',
       stepNum: '02',
-      label: 'Choose Documents',
-      subtitle: 'Financial & Ownership, Warranty, Proof',
+      label: t('nonComplianceAssets.step2'),
+      subtitle: t('nonComplianceAssets.step2Subtitle'),
     },
     {
       id: 'details',
       stepNum: '03',
-      label: 'Non-Compliance Asset Details',
-      subtitle: 'Summary, custody & lifecycle actions',
+      label: t('nonComplianceAssets.step3'),
+      subtitle: t('nonComplianceAssets.step3Subtitle'),
     },
   ];
 
@@ -214,7 +222,7 @@ function NonComplianceProgressHeader({
               type="button"
               disabled={!canNavigate}
               onClick={() => canNavigate && onStepClick?.(step.id)}
-              className={`text-left p-3 rounded-md border transition-colors flex items-center gap-3 ${
+              className={`text-left rtl:text-right p-3 rounded-md border transition-colors flex items-center gap-3 ${
                 isCurrent
                   ? 'bg-awn-primary-soft border-awn-primary'
                   : isCompleted
@@ -259,8 +267,203 @@ export default function NonComplianceAssetsPage({
   onNavigate,
 }: NonComplianceAssetsPageProps) {
   const { showToast } = useToast();
+  const { t, isRtl, formatNumber } = useLanguage();
   const docOptions = assetModuleService.getNonComplianceDocumentOptions();
   const selectOpts = assetModuleService.getNonComplianceSelectOptions();
+
+  // Document localization helpers
+  const getNonComplianceDocTitle = useCallback(
+    (id: NonComplianceDocumentId | string) => {
+      switch (id) {
+        case 'Financial & Ownership Details':
+          return t('nonComplianceAssets.docFinancial');
+        case 'Warranty Document':
+          return t('nonComplianceAssets.docWarranty');
+        case 'Proof of Ownership':
+          return t('nonComplianceAssets.docProof');
+        case 'Driving License':
+          return t('nonComplianceAssets.docLicense');
+        default:
+          return id;
+      }
+    },
+    [t]
+  );
+
+  const getNonComplianceDocDesc = useCallback(
+    (id: NonComplianceDocumentId | string, fallback: string) => {
+      switch (id) {
+        case 'Financial & Ownership Details':
+          return t('nonComplianceAssets.docFinancialDesc');
+        case 'Warranty Document':
+          return t('nonComplianceAssets.docWarrantyDesc');
+        case 'Proof of Ownership':
+          return t('nonComplianceAssets.docProofDesc');
+        case 'Driving License':
+          return t('nonComplianceAssets.docLicenseDesc');
+        default:
+          return fallback;
+      }
+    },
+    [t]
+  );
+
+  // User-facing value translation helpers (display only, preserving stored values)
+  const getConditionLabel = useCallback(
+    (condition: string) => {
+      if (!isRtl) return condition;
+      switch (condition) {
+        case 'New':
+          return t('nonComplianceAssets.optNew');
+        case 'Good':
+          return t('nonComplianceAssets.optGood');
+        case 'Needs Repair':
+          return t('nonComplianceAssets.optNeedsRepair');
+        case 'Retired':
+          return t('nonComplianceAssets.optRetired');
+        default:
+          return condition;
+      }
+    },
+    [isRtl, t]
+  );
+
+  const getDepreciationLabel = useCallback(
+    (method: string) => {
+      if (!isRtl) return method;
+      switch (method) {
+        case 'Straight Line':
+          return t('nonComplianceAssets.optStraightLine');
+        case 'Declining Balance':
+          return t('nonComplianceAssets.optDecliningBalance');
+        default:
+          return method;
+      }
+    },
+    [isRtl, t]
+  );
+
+  const getOwnershipTypeLabel = useCallback(
+    (type: string) => {
+      if (!isRtl) return type;
+      switch (type) {
+        case 'Owned':
+          return t('nonComplianceAssets.optOwned');
+        case 'Leased':
+          return t('nonComplianceAssets.optLeased');
+        case 'Rented':
+          return t('nonComplianceAssets.optRented');
+        default:
+          return type;
+      }
+    },
+    [isRtl, t]
+  );
+
+  const getAssetTypeOptionLabel = useCallback(
+    (type: string) => {
+      if (!isRtl) return type;
+      switch (type) {
+        case 'Vehicle':
+          return t('nonComplianceAssets.optVehicle');
+        case 'Non-Vehicle':
+          return t('nonComplianceAssets.optNonVehicle');
+        case 'Laptop':
+          return t('nonComplianceAssets.optLaptop');
+        case 'Mobile Device':
+          return t('nonComplianceAssets.optMobileDevice');
+        case 'Office Equipment':
+          return t('nonComplianceAssets.optOfficeEquipment');
+        default:
+          return type;
+      }
+    },
+    [isRtl, t]
+  );
+
+  const getFilterLabel = useCallback(
+    (st: string) => {
+      switch (st) {
+        case 'ALL':
+          return t('nonComplianceAssets.filterAll');
+        case 'Active':
+          return t('nonComplianceAssets.filterActive');
+        case 'Draft':
+          return t('nonComplianceAssets.filterDraft');
+        case 'Retired':
+          return t('nonComplianceAssets.filterRetired');
+        default:
+          return st;
+      }
+    },
+    [t]
+  );
+
+  // Localized select options (display only, preserving stored values)
+  const localizedSelectOpts = useMemo(() => {
+    if (!isRtl) return selectOpts;
+    return {
+      ...selectOpts,
+      languages: selectOpts.languages.map((opt) => ({
+        ...opt,
+        label:
+          opt.value === 'English'
+            ? 'الإنجليزية'
+            : opt.value === 'Arabic (العربية)'
+            ? 'العربية'
+            : 'ثنائي اللغة (EN / AR)',
+      })),
+      assetCategories: selectOpts.assetCategories.map((opt) => ({
+        ...opt,
+        label:
+          opt.value === 'Compliance'
+            ? 'امتثال'
+            : opt.value === 'Devices'
+            ? 'أجهزة'
+            : opt.value === 'IT & Office Equipment'
+            ? 'أجهزة ومعدات مكتبية'
+            : opt.value === 'Licenses'
+            ? 'تراخيص'
+            : opt.value === 'Equipment'
+            ? 'معدات'
+            : opt.label,
+      })),
+      complianceOptions: selectOpts.complianceOptions.map((opt) => ({
+        ...opt,
+        label:
+          opt.value === 'Non-Compliance'
+            ? 'غير متوافق'
+            : opt.value === 'Standard Corporate Custody'
+            ? 'عهدة مؤسسية قياسية'
+            : opt.value === 'Compliance'
+            ? 'امتثال'
+            : opt.label,
+      })),
+      assetsTypes: selectOpts.assetsTypes.map((opt) => ({
+        ...opt,
+        label: getAssetTypeOptionLabel(opt.value),
+      })),
+      ownershipAssetTypes: selectOpts.ownershipAssetTypes.map((opt) => ({
+        ...opt,
+        label: getOwnershipTypeLabel(opt.value),
+      })),
+      conditions: selectOpts.conditions.map((opt) => ({
+        ...opt,
+        label: getConditionLabel(opt.value),
+      })),
+      depreciationMethods: selectOpts.depreciationMethods.map((opt) => ({
+        ...opt,
+        label: getDepreciationLabel(opt.value),
+      })),
+    };
+  }, [
+    isRtl,
+    selectOpts,
+    getAssetTypeOptionLabel,
+    getOwnershipTypeLabel,
+    getConditionLabel,
+    getDepreciationLabel,
+  ]);
 
   // Flow steps: 'list' | 'add-form' | 'choose-documents' | 'details'
   const [flowStep, setFlowStep] = useState<NonComplianceFlowStep>(() =>
@@ -359,9 +562,10 @@ export default function NonComplianceAssetsPage({
     setSelectedDocuments([...DEFAULT_SELECTED_DOCUMENTS]);
     setDocumentSearchQuery('');
     showToast({
-      title: 'Documents Reset',
-      description:
-        'Selected Documents reset to Financial & Ownership Details and Warranty Document.',
+      title: isRtl ? 'تمت إعادة ضبط المستندات' : 'Documents Reset',
+      description: isRtl
+        ? 'تمت إعادة ضبط المستندات إلى التفاصيل المالية والملكية ووثيقة الضمان.'
+        : 'Selected Documents reset to Financial & Ownership Details and Warranty Document.',
       variant: 'info',
     });
   };
@@ -370,16 +574,18 @@ export default function NonComplianceAssetsPage({
     if (e) e.preventDefault();
     if (selectedDocuments.length === 0) {
       showToast({
-        title: 'Select at least one document',
-        description: 'Please select at least one document section before continuing.',
+        title: isRtl ? 'اختر مستنداً واحداً على الأقل' : 'Select at least one document',
+        description: t('nonComplianceAssets.selectAtLeastOneDoc'),
         variant: 'warning',
       });
       return;
     }
     setFlowStep('add-form');
     showToast({
-      title: 'Documents Updated',
-      description: `${selectedDocuments.length} document section(s) active in the form.`,
+      title: isRtl ? 'تم تحديث المستندات' : 'Documents Updated',
+      description: isRtl
+        ? `أقسام المستندات النشطة في النموذج: ${formatNumber(selectedDocuments.length)}`
+        : `${selectedDocuments.length} document section(s) active in the form.`,
       variant: 'info',
     });
   };
@@ -479,9 +685,10 @@ export default function NonComplianceAssetsPage({
     setSelectedDocuments(['Financial & Ownership Details', 'Warranty Document']);
     setFormErrors({});
     showToast({
-      title: 'Demo values populated',
-      description:
-        'Populated with exact supplied demo values (Company Laptop - Dell Latitude 5440, SN-123456789, Jarir Bookstore, MOT Test, FitnessCard.pdf).',
+      title: isRtl ? 'تمت تعبئة البيانات' : 'Demo values populated',
+      description: isRtl
+        ? 'تمت تعبئة الحقول بالقيم التجريبية المحددة للتحقق.'
+        : 'Populated with exact supplied demo values (Company Laptop - Dell Latitude 5440, SN-123456789, Jarir Bookstore, MOT Test, FitnessCard.pdf).',
       variant: 'info',
     });
   };
@@ -491,36 +698,36 @@ export default function NonComplianceAssetsPage({
 
     // Basic Details required fields
     if (!formData.basicDetails.assetsType.trim()) {
-      errors['basicDetails.assetsType'] = 'Assets type is required.';
+      errors['basicDetails.assetsType'] = t('nonComplianceAssets.assetsTypeRequired');
     }
 
     // Asset Identification required fields
     if (!formData.assetIdentification.assetName.trim()) {
-      errors['assetIdentification.assetName'] = 'Asset Name is required.';
+      errors['assetIdentification.assetName'] = t('nonComplianceAssets.assetNameRequired');
     }
     if (!formData.assetIdentification.serialNumber.trim()) {
-      errors['assetIdentification.serialNumber'] = 'Serial Number is required.';
+      errors['assetIdentification.serialNumber'] = t('nonComplianceAssets.serialRequired');
     }
 
     // Financial & Ownership Details required fields (when selected)
     if (selectedDocuments.includes('Financial & Ownership Details')) {
       if (!formData.financialOwnership.purchaseValueSar.trim()) {
         errors['financialOwnership.purchaseValueSar'] =
-          'Purchase Value (SAR) is required.';
+          t('nonComplianceAssets.purchaseValueRequired');
       }
       if (!formData.financialOwnership.condition.trim()) {
-        errors['financialOwnership.condition'] = 'Condition is required.';
+        errors['financialOwnership.condition'] = t('nonComplianceAssets.conditionRequired');
       }
       if (!formData.financialOwnership.usefulLifeYears.trim()) {
         errors['financialOwnership.usefulLifeYears'] =
-          'Useful Life (in years) is required.';
+          t('nonComplianceAssets.usefulLifeRequired');
       }
     }
 
     // Warranty Document required fields (when selected)
     if (selectedDocuments.includes('Warranty Document')) {
       if (!formData.warrantyDocument.documentNumber.trim()) {
-        errors['warrantyDocument.documentNumber'] = 'Document Number is required.';
+        errors['warrantyDocument.documentNumber'] = t('nonComplianceAssets.docNumberRequired');
       }
     }
 
@@ -543,14 +750,21 @@ export default function NonComplianceAssetsPage({
       setSuccessModalOpen(false);
       setLastSubmissionBanner({
         type: 'draft',
-        title: `Saved As Draft (${saved.code})`,
-        message: `Draft ${saved.code} has been preserved in mock service state. You can inspect its current details below or click "Edit Asset" at any time to complete and submit.`,
+        title: isRtl
+          ? `تم الحفظ كمسودة (${saved.code})`
+          : `Saved As Draft (${saved.code})`,
+        message: isRtl
+          ? `تم حفظ المسودة ${saved.code} في النظام. يمكنك مراجعة تفاصيلها أدناه أو النقر على "تعديل بيانات الأصل" في أي وقت للإكمال والتقديم.`
+          : `Draft ${saved.code} has been preserved in mock service state. You can inspect its current details below or click "Edit Asset" at any time to complete and submit.`,
       });
       await loadNonComplianceList();
       showToast({
-        title: `Saved As Draft (${saved.code})`,
-        description:
-          'Entered Non-Compliance asset values have been preserved as a draft.',
+        title: isRtl
+          ? `تم الحفظ كمسودة (${saved.code})`
+          : `Saved As Draft (${saved.code})`,
+        description: isRtl
+          ? 'تم حفظ بيانات الأصل غير المتوافق كمسودة.'
+          : 'Entered Non-Compliance asset values have been preserved as a draft.',
         variant: 'info',
       });
       setFlowStep('details');
@@ -564,9 +778,8 @@ export default function NonComplianceAssetsPage({
     if (e) e.preventDefault();
     if (!validateNonComplianceForm()) {
       showToast({
-        title: 'Required fields missing',
-        description:
-          'Please complete the highlighted required fields or use "Save As Draft" to continue later.',
+        title: isRtl ? 'حقول إلزامية مطلوبة' : 'Required fields missing',
+        description: t('nonComplianceAssets.missingRequiredFields'),
         variant: 'warning',
       });
       return;
@@ -581,22 +794,19 @@ export default function NonComplianceAssetsPage({
         },
         { isDraft: false, existingId: editingAssetId }
       );
-      const exactSuccessMessage =
-        'Asset Added Successfully! The asset has been recorded in the system. You can now assign it to an employee, track its status, and manage it from the Assets dashboard.';
 
       setActiveAsset(saved);
       setEditingAssetId(saved.id);
       setLastSubmissionBanner({
         type: 'submitted',
-        title: 'Asset Added Successfully!',
-        message: exactSuccessMessage,
+        title: t('nonComplianceAssets.assetAddedSuccess'),
+        message: t('nonComplianceAssets.assetAddedDesc'),
       });
       setSuccessModalOpen(true);
       await loadNonComplianceList();
       showToast({
-        title: 'Asset Added Successfully!',
-        description:
-          'The asset has been recorded in the system. You can now assign it to an employee, track its status, and manage it from the Assets dashboard.',
+        title: t('nonComplianceAssets.assetAddedSuccess'),
+        description: t('nonComplianceAssets.assetAddedDesc'),
         variant: 'success',
       });
       setFlowStep('details');
@@ -663,66 +873,24 @@ export default function NonComplianceAssetsPage({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleOpenReassignModal = (asset: NonComplianceAsset) => {
-    const currentEmp = asset.assetIdentification?.assignedTo || '';
-    setSelectedReassignEmployee(
-      currentEmp || (selectOpts.employees[0]?.value ?? 'Tariq Al-Mansoor')
-    );
-    setReassignLocation(
-      asset.financialOwnership?.assetLocation || 'Riyadh HQ - Floor 3'
-    );
-    setReassignModalOpen(true);
-  };
-
-  const handleConfirmReassign = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!activeAsset || !selectedReassignEmployee) return;
-
-    setSubmitting(true);
-    try {
-      const matchedEmp = selectOpts.employees.find(
-        (emp) => emp.value === selectedReassignEmployee
-      );
-      const updated = await assetModuleService.reassignNonComplianceAsset(
-        activeAsset.id,
-        {
-          assignedTo: selectedReassignEmployee,
-          assignedRole: matchedEmp?.role,
-          department: matchedEmp?.department,
-          location: reassignLocation || matchedEmp?.location,
-        }
-      );
-      setActiveAsset(updated);
-      setReassignModalOpen(false);
-      await loadNonComplianceList();
-      showToast({
-        title: `Asset ${updated.code} Reassigned`,
-        description: `Assigned to ${updated.assetIdentification.assignedTo} (${updated.department || 'Enterprise IT'}).`,
-        variant: 'success',
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleConfirmRetire = async () => {
     if (!activeAsset) return;
     setSubmitting(true);
     try {
-      const updated = await assetModuleService.retireNonComplianceAsset(
-        activeAsset.id,
-        {
-          reason: retireReason,
-        }
-      );
+      const updated = await assetModuleService.retireNonComplianceAsset(activeAsset.id, {
+        reason: retireReason,
+      });
       setActiveAsset(updated);
       setRetireDialogOpen(false);
       setRetireReason('');
       await loadNonComplianceList();
       showToast({
-        title: `Asset ${updated.code} Retired`,
-        description:
-          'The Non-Compliance asset has been deactivated and marked as Retired across the Assets registry.',
+        title: isRtl
+          ? `تم استبعاد الأصل ${updated.code}`
+          : `Asset ${updated.code} Retired`,
+        description: isRtl
+          ? 'تم تحديث حالة الأصل إلى متقاعد/مستبعد ومزامنة حالته مع سجل الأصول.'
+          : 'The asset has been retired and synchronized with the workspace.',
         variant: 'info',
       });
     } finally {
@@ -730,17 +898,57 @@ export default function NonComplianceAssetsPage({
     }
   };
 
-  const filteredDocOptions = docOptions.filter((doc) => {
-    const q = documentSearchQuery.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      doc.label.toLowerCase().includes(q) ||
-      doc.description.toLowerCase().includes(q)
+  const handleOpenReassignModal = () => {
+    if (!activeAsset) return;
+    setSelectedReassignEmployee(
+      activeAsset.assetIdentification?.assignedTo || 'Sarah Al-Otaibi'
     );
-  });
+    setReassignLocation(
+      activeAsset.financialOwnership?.assetLocation || 'Riyadh HQ - Floor 4'
+    );
+    setReassignModalOpen(true);
+  };
+
+  const handleConfirmReassign = async () => {
+    if (!activeAsset) return;
+    setSubmitting(true);
+    try {
+      const updated = await assetModuleService.reassignNonComplianceAsset(
+        activeAsset.id,
+        {
+          assignedTo: selectedReassignEmployee,
+          location: reassignLocation,
+        }
+      );
+      setActiveAsset(updated);
+      setReassignModalOpen(false);
+      await loadNonComplianceList();
+      showToast({
+        title: isRtl ? 'تم نقل العهدة بنجاح' : 'Asset Custody Reassigned',
+        description: isRtl
+          ? `تم إسناد العهدة إلى ${selectedReassignEmployee} في الموقع (${reassignLocation}).`
+          : `Assigned custody of ${updated.code} to ${selectedReassignEmployee} at ${reassignLocation}.`,
+        variant: 'success',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Filter available documents by search in Step 2
+  const filteredAvailableDocOptions = useMemo(() => {
+    const q = documentSearchQuery.trim().toLowerCase();
+    if (!q) return docOptions;
+    return docOptions.filter(
+      (d) =>
+        d.label.toLowerCase().includes(q) ||
+        d.description.toLowerCase().includes(q) ||
+        getNonComplianceDocTitle(d.id).toLowerCase().includes(q)
+    );
+  }, [docOptions, documentSearchQuery, getNonComplianceDocTitle]);
 
   // ============================================================================
-  // DEDICATED STEP: CHOOSE DOCUMENTS
+  // STEP 2: CHOOSE DOCUMENTS
   // ============================================================================
   if (flowStep === 'choose-documents') {
     return (
@@ -749,13 +957,19 @@ export default function NonComplianceAssetsPage({
           <Button
             variant="ghost"
             size="sm"
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={
+              isRtl ? (
+                <ArrowRight className="w-4 h-4" />
+              ) : (
+                <ArrowLeft className="w-4 h-4" />
+              )
+            }
             onClick={() => setFlowStep('add-form')}
           >
-            Back to Add New Non-Compliance
+            {t('nonComplianceAssets.goBack')}
           </Button>
           <span className="text-xs text-awn-text-muted">
-            Step 2 of 3 · Choose Documents
+            {t('nonComplianceAssets.stepNoticeChoose')}
           </span>
         </div>
 
@@ -766,8 +980,8 @@ export default function NonComplianceAssetsPage({
         />
 
         <PageHeader
-          title="Choose Documents"
-          description="Select or deselect the document sections required for this Non-Compliance asset."
+          title={t('nonComplianceAssets.chooseDocsTitle')}
+          description={t('nonComplianceAssets.chooseDocsDesc')}
           secondaryActions={
             <Button
               variant="outline"
@@ -775,19 +989,20 @@ export default function NonComplianceAssetsPage({
               leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
               onClick={handleResetAllDocuments}
             >
-              Reset All
+              {t('nonComplianceAssets.resetAll')}
             </Button>
           }
         />
 
         <form onSubmit={handleChooseDocumentsSubmit} className="space-y-6">
+          {/* Selected Documents Section */}
           <Card
-            title="Selected Documents"
-            description="Currently selected document sections included in the Non-Compliance Asset form."
+            title={t('nonComplianceAssets.selectedDocsTitle')}
+            description={t('nonComplianceAssets.selectedDocsDesc')}
           >
             {selectedDocuments.length === 0 ? (
               <p className="text-xs text-awn-text-muted">
-                No documents selected. Choose at least one document below.
+                {t('nonComplianceAssets.noneSelected')}
               </p>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
@@ -797,78 +1012,92 @@ export default function NonComplianceAssetsPage({
                     className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-awn-primary-soft border border-awn-primary text-xs font-semibold text-awn-primary"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                    <span>{docId}</span>
+                    <span>{getNonComplianceDocTitle(docId)}</span>
                   </div>
                 ))}
               </div>
             )}
           </Card>
 
+          {/* Available Documents Section */}
           <Card
-            title="Available Documents"
-            description="Search and toggle available document sections for this asset."
-            actions={
-              <div className="w-64">
-                <Input
-                  placeholder="Search Document"
-                  aria-label="Search Document"
-                  value={documentSearchQuery}
-                  onChange={(e) => setDocumentSearchQuery(e.target.value)}
-                  onClear={() => setDocumentSearchQuery('')}
-                  leftIcon={<Search className="w-3.5 h-3.5" />}
-                />
-              </div>
-            }
+            title={t('nonComplianceAssets.availableDocsTitle')}
+            description={t('nonComplianceAssets.availableDocsDesc')}
             footer={
               <>
-                <Button variant="outline" onClick={handleResetAllDocuments}>
-                  Reset All
+                <Button
+                  variant="outline"
+                  onClick={() => setFlowStep('add-form')}
+                >
+                  {t('nonComplianceAssets.goBack')}
                 </Button>
-                <Button variant="outline" onClick={() => setFlowStep('add-form')}>
-                  Go Back
-                </Button>
-                <Button type="submit" variant="primary">
-                  Submit
+                <Button
+                  type="submit"
+                  variant="primary"
+                  rightIcon={
+                    isRtl ? (
+                      <ArrowLeft className="w-4 h-4" />
+                    ) : (
+                      <ArrowRight className="w-4 h-4" />
+                    )
+                  }
+                >
+                  {t('nonComplianceAssets.confirm')}
                 </Button>
               </>
             }
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {filteredDocOptions.map((doc) => {
-                const isSelected = selectedDocuments.includes(doc.id);
-                return (
-                  <label
-                    key={doc.id}
-                    className={`p-4 rounded-lg border transition-colors flex items-start gap-3.5 cursor-pointer ${
-                      isSelected
-                        ? 'bg-awn-primary-soft border-awn-primary'
-                        : 'bg-awn-surface border-awn-border hover:bg-awn-surface-alt'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleDocumentSelection(doc.id)}
-                      className="mt-1 h-4 w-4 rounded border-awn-border text-awn-primary focus:ring-awn-primary cursor-pointer"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-awn-text-primary">
-                          {doc.label}
-                        </span>
-                        {isSelected && (
-                          <span className="text-[11px] font-semibold text-awn-primary">
-                            Selected
+            <div className="space-y-4">
+              <div className="w-full sm:w-80">
+                <Input
+                  placeholder={t('nonComplianceAssets.searchDocument')}
+                  value={documentSearchQuery}
+                  onChange={(e) => setDocumentSearchQuery(e.target.value)}
+                  onClear={() => setDocumentSearchQuery('')}
+                  leftIcon={<Search className="w-4 h-4" />}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {filteredAvailableDocOptions.map((doc) => {
+                  const isSelected = selectedDocuments.includes(doc.id);
+                  const title = getNonComplianceDocTitle(doc.id);
+                  const desc = getNonComplianceDocDesc(doc.id, doc.description);
+
+                  return (
+                    <label
+                      key={doc.id}
+                      className={`p-4 rounded-lg border transition-colors flex items-start gap-3.5 cursor-pointer ${
+                        isSelected
+                          ? 'bg-awn-primary-soft border-awn-primary'
+                          : 'bg-awn-surface border-awn-border hover:bg-awn-surface-alt'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleDocumentSelection(doc.id)}
+                        className="mt-1 h-4 w-4 rounded border-awn-border text-awn-primary focus:ring-awn-primary cursor-pointer"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold text-awn-text-primary">
+                            {title}
                           </span>
-                        )}
+                          {isSelected && (
+                            <span className="text-[11px] font-semibold text-awn-primary">
+                              {t('nonComplianceAssets.selectedBadge')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-awn-text-secondary mt-1 leading-relaxed">
+                          {desc}
+                        </p>
                       </div>
-                      <p className="text-xs text-awn-text-secondary mt-1 leading-relaxed">
-                        {doc.description}
-                      </p>
-                    </div>
-                  </label>
-                );
-              })}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </Card>
         </form>
@@ -877,7 +1106,7 @@ export default function NonComplianceAssetsPage({
   }
 
   // ============================================================================
-  // STEP 1 & 2: ADD NEW NON-COMPLIANCE / EDIT NON-COMPLIANCE FORM
+  // STEP 1: ADD / EDIT NON-COMPLIANCE ASSET FORM
   // ============================================================================
   if (flowStep === 'add-form') {
     const showFinancialSection = selectedDocuments.includes(
@@ -891,15 +1120,19 @@ export default function NonComplianceAssetsPage({
           <Button
             variant="ghost"
             size="sm"
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={
+              isRtl ? (
+                <ArrowRight className="w-4 h-4" />
+              ) : (
+                <ArrowLeft className="w-4 h-4" />
+              )
+            }
             onClick={() => setFlowStep('list')}
           >
-            Go Back to Non-Compliance Assets
+            {t('nonComplianceAssets.backToNonComplianceAssets')}
           </Button>
           <span className="text-xs text-awn-text-muted">
-            {editingAssetId
-              ? `Editing ${editingAssetId}`
-              : 'New Asset → Non-Compliance'}
+            {t('nonComplianceAssets.stepNoticeForm')}
           </span>
         </div>
 
@@ -909,25 +1142,30 @@ export default function NonComplianceAssetsPage({
           isEditingExisting={Boolean(editingAssetId)}
         />
 
-        {/* Exact required title and description from Section 3 */}
         <PageHeader
-          title="Add New Non-Compliance"
-          description="Add A New Business Owner By Entering Personal And Compliance Details, Assign Them To A Business Profile To Manage Ownership And Responsibilities Efficiently"
+          title={
+            editingAssetId
+              ? t('nonComplianceAssets.step1Edit')
+              : t('nonComplianceAssets.addPageTitle')
+          }
+          description={t('nonComplianceAssets.addPageDesc')}
           secondaryActions={
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setFlowStep('choose-documents')}
               >
-                Choose Documents ({selectedDocuments.length})
+                {t('nonComplianceAssets.chooseDocumentsCount', {
+                  count: formatNumber(selectedDocuments.length),
+                })}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePopulateDemoValues}
               >
-                Fill Demo Values
+                {t('nonComplianceAssets.fillDemoValues')}
               </Button>
             </div>
           }
@@ -936,61 +1174,62 @@ export default function NonComplianceAssetsPage({
         <form onSubmit={handleSubmitNonComplianceAsset} noValidate className="space-y-6">
           <Card>
             <div className="divide-y divide-awn-border">
-              {/* 1. FORM SECTION: BASIC DETAILS */}
+              {/* SECTION 1: BASIC DETAILS */}
               <FormSection
                 stepNumber="01"
-                title="Basic Details"
-                description="Specify language, customer, business unit, category, compliance scope, and assets type."
+                title={t('nonComplianceAssets.basicDetails')}
+                description={t('nonComplianceAssets.basicDetailsDesc')}
                 columns={2}
               >
                 <Select
-                  label="Language"
-                  options={selectOpts.languages}
+                  label={t('nonComplianceAssets.language')}
+                  required
+                  options={localizedSelectOpts.languages}
                   value={formData.basicDetails.language}
                   onChange={(e) =>
                     updateSectionField('basicDetails', 'language', e.target.value)
                   }
                 />
                 <Select
-                  label="Customer"
-                  options={selectOpts.customers}
+                  label={t('nonComplianceAssets.customer')}
+                  required
+                  options={localizedSelectOpts.customers}
                   value={formData.basicDetails.customer}
                   onChange={(e) =>
                     updateSectionField('basicDetails', 'customer', e.target.value)
                   }
                 />
                 <Select
-                  label="Business"
-                  options={selectOpts.businesses}
+                  label={t('nonComplianceAssets.business')}
+                  required
+                  options={localizedSelectOpts.businesses}
                   value={formData.basicDetails.business}
                   onChange={(e) =>
                     updateSectionField('basicDetails', 'business', e.target.value)
                   }
                 />
                 <Select
-                  label="Assets Category"
-                  options={selectOpts.assetCategories}
+                  label={t('nonComplianceAssets.assetsCategory')}
+                  required
+                  options={localizedSelectOpts.assetCategories}
                   value={formData.basicDetails.assetsCategory}
                   onChange={(e) =>
-                    updateSectionField(
-                      'basicDetails',
-                      'assetsCategory',
-                      e.target.value
-                    )
+                    updateSectionField('basicDetails', 'assetsCategory', e.target.value)
                   }
                 />
                 <Select
-                  label="Compliance"
-                  options={selectOpts.complianceOptions}
+                  label={t('nonComplianceAssets.compliance')}
+                  required
+                  options={localizedSelectOpts.complianceOptions}
                   value={formData.basicDetails.compliance}
                   onChange={(e) =>
                     updateSectionField('basicDetails', 'compliance', e.target.value)
                   }
                 />
                 <Select
-                  label="Assets type"
+                  label={t('nonComplianceAssets.assetsType')}
                   required
-                  options={selectOpts.assetsTypes}
+                  options={localizedSelectOpts.assetsTypes}
                   value={formData.basicDetails.assetsType}
                   onChange={(e) =>
                     updateSectionField('basicDetails', 'assetsType', e.target.value)
@@ -999,43 +1238,36 @@ export default function NonComplianceAssetsPage({
                 />
               </FormSection>
 
-              {/* 2. FORM SECTION: ASSET IDENTIFICATION */}
+              {/* SECTION 2: ASSET IDENTIFICATION */}
               <FormSection
                 stepNumber="02"
-                title="Asset Identification"
-                description="Enter hardware/asset name, serial number, brand/model, ownership type, warranty dates, and assigned employee."
+                title={t('nonComplianceAssets.assetIdentification')}
+                description={t('nonComplianceAssets.assetIdentificationDesc')}
                 columns={2}
               >
                 <Select
-                  label="Language"
-                  options={selectOpts.languages}
+                  label={t('nonComplianceAssets.language')}
+                  required
+                  options={localizedSelectOpts.languages}
                   value={formData.assetIdentification.language}
                   onChange={(e) =>
-                    updateSectionField(
-                      'assetIdentification',
-                      'language',
-                      e.target.value
-                    )
+                    updateSectionField('assetIdentification', 'language', e.target.value)
                   }
                 />
                 <Input
-                  label="Asset Name"
+                  label={t('nonComplianceAssets.assetName')}
                   required
-                  placeholder="Company Laptop - Dell Latitude 5440"
+                  placeholder="e.g., Company Laptop - Dell Latitude 5440"
                   value={formData.assetIdentification.assetName}
                   onChange={(e) =>
-                    updateSectionField(
-                      'assetIdentification',
-                      'assetName',
-                      e.target.value
-                    )
+                    updateSectionField('assetIdentification', 'assetName', e.target.value)
                   }
                   error={formErrors['assetIdentification.assetName']}
                 />
                 <Input
-                  label="Serial Number"
+                  label={t('nonComplianceAssets.serialNumber')}
                   required
-                  placeholder="SN-123456789"
+                  placeholder="e.g., SN-123456789"
                   value={formData.assetIdentification.serialNumber}
                   onChange={(e) =>
                     updateSectionField(
@@ -1047,8 +1279,8 @@ export default function NonComplianceAssetsPage({
                   error={formErrors['assetIdentification.serialNumber']}
                 />
                 <Input
-                  label="Model / Brand"
-                  placeholder="Dell Latitude / Apple iPhone 14"
+                  label={t('nonComplianceAssets.modelBrand')}
+                  placeholder="e.g., Dell Latitude 5440"
                   value={formData.assetIdentification.modelBrand}
                   onChange={(e) =>
                     updateSectionField(
@@ -1059,19 +1291,16 @@ export default function NonComplianceAssetsPage({
                   }
                 />
                 <Select
-                  label="Asset Type"
-                  options={selectOpts.ownershipAssetTypes}
+                  label={t('nonComplianceAssets.assetType')}
+                  required
+                  options={localizedSelectOpts.ownershipAssetTypes}
                   value={formData.assetIdentification.assetType}
                   onChange={(e) =>
-                    updateSectionField(
-                      'assetIdentification',
-                      'assetType',
-                      e.target.value
-                    )
+                    updateSectionField('assetIdentification', 'assetType', e.target.value)
                   }
                 />
                 <Input
-                  label="Purchase Date"
+                  label={t('nonComplianceAssets.purchaseDate')}
                   type="date"
                   value={formData.assetIdentification.purchaseDate}
                   onChange={(e) =>
@@ -1083,7 +1312,7 @@ export default function NonComplianceAssetsPage({
                   }
                 />
                 <Input
-                  label="Warranty Expiry"
+                  label={t('nonComplianceAssets.warrantyExpiry')}
                   type="date"
                   value={formData.assetIdentification.warrantyExpiry}
                   onChange={(e) =>
@@ -1095,8 +1324,9 @@ export default function NonComplianceAssetsPage({
                   }
                 />
                 <Select
-                  label="Assigned To"
-                  options={selectOpts.employees}
+                  label={t('nonComplianceAssets.assignedTo')}
+                  required
+                  options={localizedSelectOpts.employees}
                   value={formData.assetIdentification.assignedTo}
                   onChange={(e) =>
                     updateSectionField(
@@ -1108,122 +1338,69 @@ export default function NonComplianceAssetsPage({
                 />
               </FormSection>
 
-              {/* 3. FORM SECTION: DOCUMENTS INFORMATION & CHOOSE DOCUMENTS */}
+              {/* SECTION 3: DOCUMENTS INFORMATION */}
               <FormSection
                 stepNumber="03"
-                title="Documents Information"
-                description="Choose a document template and select/deselect required document sections."
-                columns={1}
+                title={t('nonComplianceAssets.documentsInfo')}
+                description={t('nonComplianceAssets.documentsInfoDesc')}
+                columns={2}
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Select
-                    label="Choose Template"
-                    options={selectOpts.templates}
-                    value={formData.documentsInfo.template}
-                    onChange={(e) => handleTemplateChange(e.target.value)}
-                  />
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-awn-text-primary">
-                      Search Document
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <Input
-                          placeholder="Search Document"
-                          aria-label="Search Document"
-                          value={documentSearchQuery}
-                          onChange={(e) => setDocumentSearchQuery(e.target.value)}
-                          onClear={() => setDocumentSearchQuery('')}
-                          leftIcon={<Search className="w-3.5 h-3.5" />}
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="md"
-                        onClick={handleResetAllDocuments}
-                      >
-                        Reset All
-                      </Button>
-                    </div>
+                <Select
+                  label={t('nonComplianceAssets.chooseTemplate')}
+                  options={localizedSelectOpts.templates}
+                  value={formData.documentsInfo.template}
+                  onChange={(e) => handleTemplateChange(e.target.value)}
+                  description={t('complianceAssets.chooseTemplateDesc')}
+                />
+                <div className="flex flex-col justify-center gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-awn-text-primary">
+                      {t('complianceAssets.selectedDocSections')}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFlowStep('choose-documents')}
+                    >
+                      {t('nonComplianceAssets.chooseDocsTitle')} →
+                    </Button>
                   </div>
-                </div>
-
-                {/* Selected Documents & Available Documents Panel */}
-                <div className="mt-4 p-4 rounded-lg bg-awn-surface-alt border border-awn-border space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <h4 className="text-xs font-semibold text-awn-text-primary">
-                        Selected Documents
-                      </h4>
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
-                        {selectedDocuments.length === 0 ? (
-                          <span className="text-xs text-awn-text-muted">
-                            None selected
-                          </span>
-                        ) : (
-                          selectedDocuments.map((docId) => (
-                            <span
-                              key={docId}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-awn-primary-soft border border-awn-primary text-xs font-semibold text-awn-primary"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                              <span>{docId}</span>
-                            </span>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-3 border-t border-awn-border">
-                    <h4 className="text-xs font-semibold text-awn-text-primary mb-2.5">
-                      Available Documents
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {filteredDocOptions.map((doc) => {
-                        const isSelected = selectedDocuments.includes(doc.id);
-                        return (
-                          <label
-                            key={doc.id}
-                            className={`p-3 rounded-md border transition-colors flex items-start gap-3 cursor-pointer ${
-                              isSelected
-                                ? 'bg-awn-surface border-awn-primary'
-                                : 'bg-awn-surface border-awn-border hover:border-awn-border-strong'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => toggleDocumentSelection(doc.id)}
-                              className="mt-0.5 h-4 w-4 rounded border-awn-border text-awn-primary focus:ring-awn-primary cursor-pointer"
-                            />
-                            <div className="min-w-0 flex-1">
-                              <div className="text-xs font-semibold text-awn-text-primary">
-                                {doc.label}
-                              </div>
-                              <p className="text-[11px] text-awn-text-secondary mt-0.5 leading-relaxed">
-                                {doc.description}
-                              </p>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {docOptions.map((doc) => {
+                      const active = selectedDocuments.includes(doc.id);
+                      const title = getNonComplianceDocTitle(doc.id);
+                      return (
+                        <button
+                          key={doc.id}
+                          type="button"
+                          onClick={() => toggleDocumentSelection(doc.id)}
+                          aria-pressed={active}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors flex items-center gap-1.5 cursor-pointer ${
+                            active
+                              ? 'bg-awn-primary-soft text-awn-primary border-awn-primary font-semibold'
+                              : 'bg-awn-surface-alt text-awn-text-secondary border-awn-border hover:text-awn-text-primary'
+                          }`}
+                        >
+                          {active && <Check className="w-3 h-3 shrink-0" />}
+                          <span>{title}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </FormSection>
 
-              {/* 4. FORM SECTION: FINANCIAL & OWNERSHIP DETAILS */}
+              {/* SECTION 4: FINANCIAL & OWNERSHIP DETAILS (When Selected) */}
               {showFinancialSection && (
                 <FormSection
                   stepNumber="04"
-                  title="Financial & Ownership Details"
-                  description="Capture purchase value, supplier, physical location, condition, useful life, and depreciation method."
+                  title={t('nonComplianceAssets.financialOwnership')}
+                  description={t('nonComplianceAssets.financialOwnershipDesc')}
                   columns={2}
                 >
                   <Input
-                    label="Purchase Value (SAR)"
+                    label={t('nonComplianceAssets.purchaseValueSar')}
                     required
                     placeholder="e.g., 4,500 SAR"
                     value={formData.financialOwnership.purchaseValueSar}
@@ -1237,7 +1414,7 @@ export default function NonComplianceAssetsPage({
                     error={formErrors['financialOwnership.purchaseValueSar']}
                   />
                   <Input
-                    label="Vendor / Supplier"
+                    label={t('nonComplianceAssets.vendorSupplier')}
                     placeholder="e.g., Jarir Bookstore"
                     value={formData.financialOwnership.vendorSupplier}
                     onChange={(e) =>
@@ -1249,8 +1426,8 @@ export default function NonComplianceAssetsPage({
                     }
                   />
                   <Input
-                    label="Asset Location"
-                    placeholder="Riyadh HQ - Floor 3"
+                    label={t('nonComplianceAssets.assetLocation')}
+                    placeholder="e.g., Riyadh HQ - Floor 3"
                     value={formData.financialOwnership.assetLocation}
                     onChange={(e) =>
                       updateSectionField(
@@ -1261,9 +1438,9 @@ export default function NonComplianceAssetsPage({
                     }
                   />
                   <Select
-                    label="Condition"
+                    label={t('nonComplianceAssets.condition')}
                     required
-                    options={selectOpts.conditions}
+                    options={localizedSelectOpts.conditions}
                     value={formData.financialOwnership.condition}
                     onChange={(e) =>
                       updateSectionField(
@@ -1275,7 +1452,7 @@ export default function NonComplianceAssetsPage({
                     error={formErrors['financialOwnership.condition']}
                   />
                   <Input
-                    label="Useful Life (in years)"
+                    label={t('nonComplianceAssets.usefulLifeYears')}
                     required
                     placeholder="e.g., 3 Years"
                     value={formData.financialOwnership.usefulLifeYears}
@@ -1289,8 +1466,8 @@ export default function NonComplianceAssetsPage({
                     error={formErrors['financialOwnership.usefulLifeYears']}
                   />
                   <Select
-                    label="Depreciation Method"
-                    options={selectOpts.depreciationMethods}
+                    label={t('nonComplianceAssets.depreciationMethod')}
+                    options={localizedSelectOpts.depreciationMethods}
                     value={formData.financialOwnership.depreciationMethod}
                     onChange={(e) =>
                       updateSectionField(
@@ -1300,19 +1477,33 @@ export default function NonComplianceAssetsPage({
                       )
                     }
                   />
+                  <div className="sm:col-span-2">
+                    <Input
+                      label={t('nonComplianceAssets.currentBookValue')}
+                      placeholder="e.g., 3,200 SAR as of 2025"
+                      value={formData.financialOwnership.currentBookValue}
+                      onChange={(e) =>
+                        updateSectionField(
+                          'financialOwnership',
+                          'currentBookValue',
+                          e.target.value
+                        )
+                      }
+                    />
+                  </div>
                 </FormSection>
               )}
 
-              {/* 5. FORM SECTION: WARRANTY DOCUMENT */}
+              {/* SECTION 5: WARRANTY DOCUMENT (When Selected) */}
               {showWarrantySection && (
                 <FormSection
                   stepNumber="05"
-                  title="Warranty Document"
-                  description="Record warranty document metadata, reference number, key dates, and document file reference."
+                  title={t('nonComplianceAssets.warrantyDocument')}
+                  description={t('nonComplianceAssets.warrantyDocumentDesc')}
                   columns={2}
                 >
                   <Input
-                    label="Document Name"
+                    label={t('nonComplianceAssets.documentName')}
                     placeholder="e.g., MOT Test"
                     value={formData.warrantyDocument.documentName}
                     onChange={(e) =>
@@ -1324,7 +1515,7 @@ export default function NonComplianceAssetsPage({
                     }
                   />
                   <Input
-                    label="Document Number"
+                    label={t('nonComplianceAssets.documentNumber')}
                     required
                     placeholder="e.g., WAR-DL5440-2025-091"
                     value={formData.warrantyDocument.documentNumber}
@@ -1338,7 +1529,7 @@ export default function NonComplianceAssetsPage({
                     error={formErrors['warrantyDocument.documentNumber']}
                   />
                   <Input
-                    label="Issue Date"
+                    label={t('nonComplianceAssets.issueDate')}
                     type="date"
                     value={formData.warrantyDocument.issueDate}
                     onChange={(e) =>
@@ -1350,7 +1541,7 @@ export default function NonComplianceAssetsPage({
                     }
                   />
                   <Input
-                    label="Renewal Date"
+                    label={t('nonComplianceAssets.renewalDate')}
                     type="date"
                     value={formData.warrantyDocument.renewalDate}
                     onChange={(e) =>
@@ -1362,7 +1553,7 @@ export default function NonComplianceAssetsPage({
                     }
                   />
                   <Input
-                    label="Expiry Date"
+                    label={t('nonComplianceAssets.expiryDate')}
                     type="date"
                     value={formData.warrantyDocument.expiryDate}
                     onChange={(e) =>
@@ -1373,28 +1564,38 @@ export default function NonComplianceAssetsPage({
                       )
                     }
                   />
-                  <UploadDocumentField
-                    label="Upload Document"
-                    value={formData.warrantyDocument.uploadDocument}
-                    onChange={(val) =>
+                  <Input
+                    label={t('nonComplianceAssets.validityDate')}
+                    type="date"
+                    value={formData.warrantyDocument.validityDate}
+                    onChange={(e) =>
                       updateSectionField(
                         'warrantyDocument',
-                        'uploadDocument',
-                        val
+                        'validityDate',
+                        e.target.value
                       )
                     }
-                    placeholder="e.g., FitnessCard.pdf"
                   />
+                  <div className="sm:col-span-2">
+                    <UploadDocumentField
+                      label={t('nonComplianceAssets.uploadDocument')}
+                      value={formData.warrantyDocument.uploadDocument}
+                      onChange={(val) =>
+                        updateSectionField('warrantyDocument', 'uploadDocument', val)
+                      }
+                      placeholder={isRtl ? 'مثال: FitnessCard.pdf' : 'e.g., FitnessCard.pdf'}
+                      uploadButtonLabel={t('nonComplianceAssets.uploadDocument')}
+                    />
+                  </div>
                 </FormSection>
               )}
             </div>
           </Card>
 
-          {/* FORM FOOTER ACTIONS: Go Back | Save As Draft | Submit */}
+          {/* FORM FOOTER ACTIONS: Save As Draft | Submit */}
           <div className="bg-awn-surface border border-awn-border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="text-xs text-awn-text-secondary">
-              Preserve progress with <strong className="text-awn-text-primary">Save As Draft</strong> or click{' '}
-              <strong className="text-awn-text-primary">Submit</strong> to validate and open Non-Compliance Asset Details.
+              {t('nonComplianceAssets.formNotice')}
             </div>
 
             <div className="flex flex-wrap items-center justify-end gap-2.5">
@@ -1403,7 +1604,7 @@ export default function NonComplianceAssetsPage({
                 onClick={() => setFlowStep('list')}
                 disabled={submitting}
               >
-                Go Back
+                {t('nonComplianceAssets.cancel')}
               </Button>
               <Button
                 variant="gold"
@@ -1411,7 +1612,7 @@ export default function NonComplianceAssetsPage({
                 onClick={handleSaveAsDraft}
                 loading={submitting}
               >
-                Save As Draft
+                {t('nonComplianceAssets.saveAsDraft')}
               </Button>
               <Button
                 type="submit"
@@ -1419,7 +1620,7 @@ export default function NonComplianceAssetsPage({
                 leftIcon={<CheckCircle2 className="w-4 h-4" />}
                 loading={submitting}
               >
-                Submit
+                {t('nonComplianceAssets.submit')}
               </Button>
             </div>
           </div>
@@ -1429,7 +1630,7 @@ export default function NonComplianceAssetsPage({
   }
 
   // ============================================================================
-  // STEP 3: NON-COMPLIANCE ASSET DETAILS
+  // STEP 3: NON-COMPLIANCE ASSET DETAILS VIEW
   // ============================================================================
   if (flowStep === 'details' && activeAsset) {
     const basic = activeAsset.basicDetails;
@@ -1438,19 +1639,34 @@ export default function NonComplianceAssetsPage({
     const war = activeAsset.warrantyDocument;
     const isRetired = activeAsset.status === 'Retired';
     const isDraft = activeAsset.status === 'Draft';
+    const displayStatusLabel =
+      activeAsset.status === 'Draft'
+        ? t('nonComplianceAssets.optDraft')
+        : activeAsset.status === 'Retired'
+        ? t('nonComplianceAssets.optRetired')
+        : activeAsset.status === 'Assigned'
+        ? t('nonComplianceAssets.optAssigned')
+        : activeAsset.status === 'Available'
+        ? t('nonComplianceAssets.optAvailable')
+        : activeAsset.status;
 
     return (
       <div className="space-y-6">
-        {/* Top Navigation Context */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              leftIcon={<ArrowLeft className="w-4 h-4" />}
+              leftIcon={
+                isRtl ? (
+                  <ArrowRight className="w-4 h-4" />
+                ) : (
+                  <ArrowLeft className="w-4 h-4" />
+                )
+              }
               onClick={() => setFlowStep('list')}
             >
-              Back to Non-Compliance Assets
+              {t('nonComplianceAssets.backToNonComplianceAssets')}
             </Button>
             <span className="text-awn-text-muted text-xs">·</span>
             <button
@@ -1458,11 +1674,11 @@ export default function NonComplianceAssetsPage({
               onClick={() => onNavigate('/assets/registry')}
               className="text-xs text-awn-text-secondary hover:text-awn-primary cursor-pointer"
             >
-              Main Assets Workspace
+              {t('complianceAssets.mainAssetsWorkspace')}
             </button>
           </div>
           <span className="text-xs font-mono text-awn-text-muted tabular-nums">
-            Asset ID: {activeAsset.code}
+            {t('complianceAssets.assetIdLabel')}: {activeAsset.code}
           </span>
         </div>
 
@@ -1472,7 +1688,7 @@ export default function NonComplianceAssetsPage({
           isEditingExisting={false}
         />
 
-        {/* Post-Action Success / Draft Confirmation Banner */}
+        {/* Post-Action Confirmation Banner */}
         {lastSubmissionBanner && (
           <div
             role="status"
@@ -1505,17 +1721,17 @@ export default function NonComplianceAssetsPage({
               size="sm"
               onClick={() => setLastSubmissionBanner(null)}
             >
-              Dismiss
+              {t('nonComplianceAssets.dismiss')}
             </Button>
           </div>
         )}
 
-        {/* Details Header & Required Actions (Section 16) */}
+        {/* Header with Status and Lifecycle Actions */}
         <PageHeader
-          title="Non-Compliance Asset Details"
-          description={`${activeAsset.code} · ${ident.assetName || 'Company Laptop - Dell Latitude 5440'} · Serial: ${ident.serialNumber || 'SN-123456789'}`}
+          title={t('nonComplianceAssets.assetDetailsTitle')}
+          description={`${activeAsset.code} · ${ident.assetName || basic.assetsType} · SN: ${ident.serialNumber || '—'}`}
           secondaryActions={
-            <>
+            <div className="flex items-center gap-2">
               {!isRetired && (
                 <Button
                   variant="dangerOutline"
@@ -1523,18 +1739,18 @@ export default function NonComplianceAssetsPage({
                   leftIcon={<Ban className="w-4 h-4" />}
                   onClick={() => setRetireDialogOpen(true)}
                 >
-                  Retire / Deactivate Asset
+                  {t('nonComplianceAssets.retireDeactivateAsset')}
                 </Button>
               )}
               <Button
                 variant="outline"
                 size="md"
                 leftIcon={<UserPlus className="w-4 h-4" />}
-                onClick={() => handleOpenReassignModal(activeAsset)}
+                onClick={handleOpenReassignModal}
               >
-                Reassign To Another Employee
+                {t('nonComplianceAssets.reassignToEmployee')}
               </Button>
-            </>
+            </div>
           }
           primaryAction={
             <Button
@@ -1543,12 +1759,12 @@ export default function NonComplianceAssetsPage({
               leftIcon={<Pencil className="w-4 h-4" />}
               onClick={() => handleEditExistingAsset(activeAsset)}
             >
-              Edit Asset
+              {t('nonComplianceAssets.editAsset')}
             </Button>
           }
         />
 
-        {/* Enterprise Company & Status Summary Card (Section 12) */}
+        {/* Enterprise Entity & Custody Overview Card */}
         <div className="bg-awn-surface border border-awn-border rounded-lg p-5">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-start gap-3.5">
@@ -1558,7 +1774,7 @@ export default function NonComplianceAssetsPage({
               <div>
                 <div className="flex flex-wrap items-center gap-2.5">
                   <h2 className="text-base font-semibold text-awn-text-primary">
-                    {activeAsset.companyName || 'Advanced Tech Co.'}
+                    Advanced Tech Co.
                   </h2>
                   <StatusBadge
                     label={
@@ -1566,266 +1782,229 @@ export default function NonComplianceAssetsPage({
                         ? 'Retired'
                         : isDraft
                         ? 'Draft'
-                        : `Status: ${activeAsset.status}`
+                        : activeAsset.status
                     }
                     tone={activeAsset.statusTone}
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-awn-text-secondary mt-1.5">
                   <span>
-                    Company:{' '}
-                    <strong className="text-awn-text-primary">
-                      {activeAsset.companyName || 'Advanced Tech Co.'}
-                    </strong>
-                  </span>
-                  <span>·</span>
-                  <span>
-                    CR:{' '}
+                    {t('nonComplianceAssets.crNumber')}:{' '}
                     <strong className="font-mono text-awn-text-primary tabular-nums">
-                      {activeAsset.crNumber || 'CR-1040123486'}
+                      CR-1040123486
                     </strong>
                   </span>
                   <span>·</span>
                   <span>
-                    Unified ID:{' '}
+                    {t('nonComplianceAssets.unifiedId')}:{' '}
                     <strong className="font-mono text-awn-text-primary tabular-nums">
-                      {activeAsset.unifiedId || 'UNIFIED-7001928345'}
+                      UNIFIED-7001928345
                     </strong>
                   </span>
                   <span>·</span>
                   <span>
-                    Status:{' '}
+                    {t('complianceAssets.assetIdLabel')}:{' '}
+                    <strong className="font-mono text-awn-text-primary tabular-nums">
+                      {activeAsset.code}
+                    </strong>
+                  </span>
+                  <span>·</span>
+                  <span>
+                    {t('nonComplianceAssets.status')}:{' '}
                     <strong className="text-awn-text-primary">
-                      {activeAsset.status}
+                      {displayStatusLabel}
                     </strong>
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="text-xs text-awn-text-muted font-mono tabular-nums md:text-right">
-              <div>Last Updated: {activeAsset.updatedAt}</div>
+            <div className="text-xs text-awn-text-muted font-mono tabular-nums md:text-right rtl:md:text-left">
+              <div>
+                {t('nonComplianceAssets.lastUpdated')}: {activeAsset.updatedAt}
+              </div>
               <div className="mt-0.5">
-                Assigned Custodian: {ident.assignedTo || 'Unassigned'}
+                {t('nonComplianceAssets.assignedCustodian')}:{' '}
+                <strong className="text-awn-text-primary font-sans">
+                  {ident.assignedTo || t('nonComplianceAssets.unassigned')}
+                </strong>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Details Sections Grid (Sections 13, 14, 15) */}
+        {/* Structured Sections Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* SECTION 13: BASIC INFORMATION */}
-          <Card title="Basic Information" className="lg:col-span-2">
+          {/* Basic Information */}
+          <Card title={t('nonComplianceAssets.basicInformation')}>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 text-xs">
+              <div className="pb-2.5 border-b border-awn-border">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.assetName')}</dt>
+                <dd className="font-medium text-awn-text-primary mt-1">
+                  {ident.assetName || '—'}
+                </dd>
+              </div>
+              <div className="pb-2.5 border-b border-awn-border">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.serialNumber')}</dt>
+                <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
+                  {ident.serialNumber || '—'}
+                </dd>
+              </div>
+              <div className="pb-2.5 border-b border-awn-border">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.modelBrand')}</dt>
+                <dd className="font-medium text-awn-text-primary mt-1">
+                  {ident.modelBrand || '—'}
+                </dd>
+              </div>
+              <div className="pb-2.5 border-b border-awn-border">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.assetType')}</dt>
+                <dd className="font-medium text-awn-text-primary mt-1">
+                  {getOwnershipTypeLabel(ident.assetType)}
+                </dd>
+              </div>
+              <div className="pb-2.5 border-b border-awn-border">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.purchaseDate')}</dt>
+                <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
+                  {ident.purchaseDate || '—'}
+                </dd>
+              </div>
+              <div className="pb-2.5 border-b border-awn-border">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.warrantyExpiry')}</dt>
+                <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
+                  {ident.warrantyExpiry || '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.assetsCategory')}</dt>
+                <dd className="font-medium text-awn-text-primary mt-1">
+                  {basic.assetsCategory || '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.assignedTo')}</dt>
+                <dd className="font-medium text-awn-primary mt-1">
+                  {ident.assignedTo || t('nonComplianceAssets.unassigned')}
+                </dd>
+              </div>
+            </dl>
+          </Card>
+
+          {/* Financial & Ownership */}
+          <Card title={t('nonComplianceAssets.financialAndOwnership')}>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 text-xs">
+              <div className="pb-2.5 border-b border-awn-border">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.purchaseValueSar')}</dt>
+                <dd className="font-mono font-semibold text-awn-text-primary mt-1 tabular-nums">
+                  {fin.purchaseValueSar || '—'}
+                </dd>
+              </div>
+              <div className="pb-2.5 border-b border-awn-border">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.vendor')}</dt>
+                <dd className="font-medium text-awn-text-primary mt-1">
+                  {fin.vendorSupplier || '—'}
+                </dd>
+              </div>
+              <div className="pb-2.5 border-b border-awn-border">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.assetLocation')}</dt>
+                <dd className="font-medium text-awn-text-primary mt-1">
+                  {fin.assetLocation || '—'}
+                </dd>
+              </div>
+              <div className="pb-2.5 border-b border-awn-border">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.condition')}</dt>
+                <dd className="font-medium text-awn-text-primary mt-1">
+                  {getConditionLabel(fin.condition)}
+                </dd>
+              </div>
+              <div className="pb-2.5 border-b border-awn-border">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.usefulLife')}</dt>
+                <dd className="font-medium text-awn-text-primary mt-1">
+                  {fin.usefulLifeYears || '—'}
+                </dd>
+              </div>
+              <div className="pb-2.5 border-b border-awn-border">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.depreciationMethod')}</dt>
+                <dd className="font-medium text-awn-text-primary mt-1">
+                  {getDepreciationLabel(fin.depreciationMethod)}
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.currentBookValue')}</dt>
+                <dd className="font-mono font-semibold text-awn-success mt-1 tabular-nums">
+                  {fin.currentBookValue || '—'}
+                </dd>
+              </div>
+            </dl>
+          </Card>
+
+          {/* Warranty Document */}
+          <Card title={t('nonComplianceAssets.warrantyDocument')} className="lg:col-span-2">
             <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3.5 text-xs">
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Asset Name</dt>
-                <dd className="font-semibold text-awn-text-primary mt-1">
-                  {ident.assetName || 'Company Laptop - Dell Latitude 5440'}
-                </dd>
-              </div>
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Asset Category</dt>
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.documentName')}</dt>
                 <dd className="font-medium text-awn-text-primary mt-1">
-                  {basic.assetsCategory || 'Compliance'}
+                  {war.documentName || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Serial Number</dt>
-                <dd className="font-mono font-semibold text-awn-text-primary mt-1 tabular-nums">
-                  {ident.serialNumber || 'SN-123456789'}
-                </dd>
-              </div>
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Asset Type</dt>
-                <dd className="font-medium text-awn-text-primary mt-1">
-                  {ident.assetType || 'Laptop'}
-                </dd>
-              </div>
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Purchase Date</dt>
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.documentNumber')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
-                  {ident.purchaseDate || '2025-01-15'}
+                  {war.documentNumber || '—'}
                 </dd>
               </div>
               <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Assigned to</dt>
-                <dd className="font-medium text-awn-text-primary mt-1">
-                  {ident.assignedTo || 'Unassigned'}
-                </dd>
-              </div>
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Assets Type</dt>
-                <dd className="font-medium text-awn-text-primary mt-1">
-                  {basic.assetsType === 'Vehicle' ? 'Non-Vehicle' : basic.assetsType || 'Non-Vehicle'}
-                </dd>
-              </div>
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Model / Brand</dt>
-                <dd className="font-medium text-awn-text-primary mt-1">
-                  {ident.modelBrand || 'Dell Latitude 5440'}
-                </dd>
-              </div>
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Condition</dt>
-                <dd className="font-medium text-awn-text-primary mt-1">
-                  {fin.condition || 'Good'}
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.issueDate')}</dt>
+                <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
+                  {war.issueDate || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Warranty Expiry</dt>
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.renewalDate')}</dt>
                 <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
-                  {ident.warrantyExpiry || '2028-01-14'}
-                </dd>
-              </div>
-            </dl>
-          </Card>
-
-          {/* SECTION 14: FINANCIAL & OWNERSHIP */}
-          <Card title="Financial & Ownership">
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 text-xs">
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Purchase Value</dt>
-                <dd className="font-mono font-semibold text-awn-text-primary mt-1 tabular-nums">
-                  {fin.purchaseValueSar || '4,500 SAR'}
-                </dd>
-              </div>
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Useful Life</dt>
-                <dd className="font-medium text-awn-text-primary mt-1">
-                  {fin.usefulLifeYears || '3 Years'}
-                </dd>
-              </div>
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Current Book Value</dt>
-                <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
-                  {fin.currentBookValue || '3,200 SAR as of 2025'}
-                </dd>
-              </div>
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Vendor</dt>
-                <dd className="font-medium text-awn-text-primary mt-1">
-                  {fin.vendorSupplier || 'Jarir Bookstore'}
+                  {war.renewalDate || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Depreciation Method</dt>
-                <dd className="font-medium text-awn-text-primary mt-1">
-                  {fin.depreciationMethod || 'Straight Line'}
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.expiryDate')}</dt>
+                <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
+                  {war.expiryDate || '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-awn-text-muted">Asset Location</dt>
-                <dd className="font-medium text-awn-text-primary mt-1">
-                  {fin.assetLocation || 'Riyadh HQ - Floor 3'}
-                </dd>
-              </div>
-            </dl>
-          </Card>
-
-          {/* SECTION 15: WARRANTY DOCUMENT */}
-          <Card title="Warranty Document">
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 text-xs">
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Document Name</dt>
-                <dd className="font-medium text-awn-text-primary mt-1">
-                  {war.documentName || 'MOT Test'}
-                </dd>
-              </div>
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Issue Date</dt>
-                <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
-                  {war.issueDate || '2025-01-15'}
-                </dd>
-              </div>
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Renewal Date</dt>
-                <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
-                  {war.renewalDate || '2027-12-15'}
-                </dd>
-              </div>
-              <div className="pb-2.5 border-b border-awn-border">
-                <dt className="text-awn-text-muted">Document Number</dt>
-                <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
-                  {war.documentNumber || 'WAR-DL5440-2025-091'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-awn-text-muted">Validity Date</dt>
-                <dd className="font-mono font-medium text-awn-text-primary mt-1 tabular-nums">
-                  {war.validityDate || war.expiryDate || '2028-01-14'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-awn-text-muted">Document Copy</dt>
-                <dd className="mt-1">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      showToast({
-                        title: 'Opening Document Copy',
-                        description: `Previewing ${war.uploadDocument || 'FitnessCard.pdf'}`,
-                        variant: 'info',
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 font-medium text-awn-primary hover:underline cursor-pointer"
-                  >
-                    <FileCheck2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                    <span>{war.uploadDocument || 'FitnessCard.pdf'}</span>
-                  </button>
+                <dt className="text-awn-text-muted">{t('nonComplianceAssets.documentCopy')}</dt>
+                <dd className="font-medium text-awn-primary mt-1">
+                  {war.uploadDocument ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        showToast({
+                          title: war.documentName || t('nonComplianceAssets.warrantyDocument'),
+                          description: war.uploadDocument,
+                          variant: 'info',
+                        })
+                      }
+                      className="inline-flex items-center gap-1.5 text-xs text-awn-primary hover:underline cursor-pointer"
+                    >
+                      <FileCheck2 className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>{war.uploadDocument}</span>
+                    </button>
+                  ) : (
+                    <span className="text-awn-text-muted">
+                      {t('complianceAssets.notUploaded')}
+                    </span>
+                  )}
                 </dd>
               </div>
             </dl>
           </Card>
         </div>
 
-        {/* Success State Confirmation Modal (Section 11) */}
-        <Modal
-          isOpen={successModalOpen}
-          onClose={() => setSuccessModalOpen(false)}
-          title="Asset Added Successfully!"
-          size="sm"
-          footer={
-            <>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSuccessModalOpen(false);
-                  onNavigate('/assets/registry');
-                }}
-              >
-                Go to Assets Workspace
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => setSuccessModalOpen(false)}
-              >
-                View Asset Details
-              </Button>
-            </>
-          }
-        >
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-lg bg-awn-success-soft border border-awn-success-border flex items-center justify-center text-awn-success shrink-0">
-              <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm text-awn-text-primary leading-relaxed">
-                Asset Added Successfully! The asset has been recorded in the system. You can now assign it to an employee, track its status, and manage it from the Assets dashboard.
-              </p>
-              <div className="p-2.5 rounded-md bg-awn-surface-alt border border-awn-border text-xs font-mono text-awn-text-secondary tabular-nums">
-                {activeAsset.code} · {ident.assetName || 'Company Laptop - Dell Latitude 5440'} · Status: {activeAsset.status}
-              </div>
-            </div>
-          </div>
-        </Modal>
-
-        {/* Reassign To Another Employee Modal (Section 16) */}
+        {/* Reassign Modal */}
         <Modal
           isOpen={reassignModalOpen}
           onClose={() => setReassignModalOpen(false)}
-          title="Reassign To Another Employee"
-          description={`Update employee custody for ${activeAsset.code} (${ident.assetName || 'Company Laptop - Dell Latitude 5440'}).`}
-          size="md"
+          title={t('nonComplianceAssets.reassignTitle')}
+          size="sm"
           footer={
             <>
               <Button
@@ -1833,58 +2012,57 @@ export default function NonComplianceAssetsPage({
                 onClick={() => setReassignModalOpen(false)}
                 disabled={submitting}
               >
-                Cancel
+                {t('nonComplianceAssets.cancel')}
               </Button>
               <Button
                 variant="primary"
                 onClick={handleConfirmReassign}
                 loading={submitting}
               >
-                Confirm Reassignment
+                {t('nonComplianceAssets.confirmReassignment')}
               </Button>
             </>
           }
         >
-          <form onSubmit={handleConfirmReassign} className="space-y-4">
+          <div className="space-y-4">
+            <p className="text-xs text-awn-text-secondary leading-relaxed">
+              {t('nonComplianceAssets.reassignDesc', {
+                code: activeAsset.code,
+                name: ident.assetName || basic.assetsType,
+              })}
+            </p>
             <Select
-              label="Assigned To"
+              label={t('nonComplianceAssets.assignedTo')}
               required
-              options={selectOpts.employees}
+              options={localizedSelectOpts.employees}
               value={selectedReassignEmployee}
-              onChange={(e) => {
-                const nextEmpName = e.target.value;
-                setSelectedReassignEmployee(nextEmpName);
-                const matched = selectOpts.employees.find(
-                  (emp) => emp.value === nextEmpName
-                );
-                if (matched?.location) {
-                  setReassignLocation(matched.location);
-                }
-              }}
+              onChange={(e) => setSelectedReassignEmployee(e.target.value)}
             />
             <Input
-              label="Asset Location"
+              label={t('nonComplianceAssets.assetLocation')}
+              required
+              placeholder="e.g., Jeddah Office - Branch 2"
               value={reassignLocation}
               onChange={(e) => setReassignLocation(e.target.value)}
-              placeholder="Riyadh HQ - Floor 3"
             />
-          </form>
+          </div>
         </Modal>
 
-        {/* Retire / Deactivate Confirmation Dialog (Section 16) */}
+        {/* Retire Confirmation Dialog */}
         <ConfirmDialog
           isOpen={retireDialogOpen}
           onClose={() => setRetireDialogOpen(false)}
           onConfirm={handleConfirmRetire}
-          title="Retire / Deactivate Asset"
-          description="Confirming this action will transition this Non-Compliance Asset to Retired status and synchronize its status with the Main Assets workspace."
-          itemSummary={`${activeAsset.code} — ${ident.assetName || 'Company Laptop - Dell Latitude 5440'} (${ident.serialNumber || 'SN-123456789'})`}
-          confirmLabel="Confirm Retire / Deactivate"
+          title={t('nonComplianceAssets.confirmRetireTitle')}
+          description={t('nonComplianceAssets.confirmRetireDesc')}
+          itemSummary={`${activeAsset.code} — ${ident.assetName || basic.assetsType} (${ident.serialNumber || '—'})`}
+          confirmLabel={t('nonComplianceAssets.confirmRetireButton')}
+          cancelLabel={t('nonComplianceAssets.cancel')}
           loading={submitting}
         >
           <Input
-            label="Reason for Retirement / Deactivation"
-            placeholder="e.g., End of lifecycle or hardware replacement"
+            label={t('nonComplianceAssets.retireReasonLabel')}
+            placeholder={t('nonComplianceAssets.retireReasonPlaceholder')}
             value={retireReason}
             onChange={(e) => setRetireReason(e.target.value)}
           />
@@ -1894,21 +2072,27 @@ export default function NonComplianceAssetsPage({
   }
 
   // ============================================================================
-  // DEFAULT VIEW: NON-COMPLIANCE ASSETS REGISTRY & ENTRY LIST
+  // DEFAULT VIEW: LIST TABLE & REGISTRY
   // ============================================================================
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Non-Compliance Assets"
-        description="Track and manage corporate IT hardware, devices, financial ownership records, and warranty documentation."
+        title={t('nonComplianceAssets.title')}
+        description={t('nonComplianceAssets.description')}
         secondaryActions={
           <Button
             variant="outline"
             size="md"
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            leftIcon={
+              isRtl ? (
+                <ArrowRight className="w-4 h-4" />
+              ) : (
+                <ArrowLeft className="w-4 h-4" />
+              )
+            }
             onClick={() => onNavigate('/assets/registry')}
           >
-            Back to Assets
+            {t('nonComplianceAssets.backToAssets')}
           </Button>
         }
         primaryAction={
@@ -1918,22 +2102,22 @@ export default function NonComplianceAssetsPage({
             leftIcon={<Plus className="w-4 h-4" />}
             onClick={handleStartNewNonComplianceAsset}
           >
-            Add New Non-Compliance
+            {t('nonComplianceAssets.addNewNonCompliance')}
           </Button>
         }
       />
 
-      {/* Non-Compliance Assets Table */}
+      {/* Main Table */}
       <div className="bg-awn-surface border border-awn-border rounded-lg overflow-hidden">
         <div className="p-4 border-b border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="w-full sm:w-80">
             <Input
-              placeholder="Search by code, asset name, serial, employee..."
+              placeholder={t('nonComplianceAssets.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onClear={() => setSearchQuery('')}
               leftIcon={<Search className="w-4 h-4" />}
-              aria-label="Search non-compliance assets"
+              aria-label={t('nonComplianceAssets.searchAria')}
             />
           </div>
 
@@ -1955,7 +2139,7 @@ export default function NonComplianceAssetsPage({
                       : 'text-awn-text-secondary hover:text-awn-text-primary'
                   }`}
                 >
-                  {st === 'ALL' ? 'All' : st}
+                  {getFilterLabel(st)}
                 </button>
               );
             })}
@@ -1963,26 +2147,40 @@ export default function NonComplianceAssetsPage({
         </div>
 
         {loadingList ? (
-          <TableSkeleton rows={4} columns={6} />
+          <TableSkeleton rows={4} columns={7} />
         ) : nonComplianceList.length === 0 ? (
           <EmptyState
-            title="No Non-Compliance Assets Found"
-            description="Create a new Non-Compliance asset to record identification, financial ownership, and warranty documents."
-            primaryActionLabel="Add New Non-Compliance"
+            title={t('nonComplianceAssets.noAssetsFound')}
+            description={t('nonComplianceAssets.noAssetsDesc')}
+            primaryActionLabel={t('nonComplianceAssets.addNewNonCompliance')}
             onPrimaryAction={handleStartNewNonComplianceAsset}
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left rtl:text-right border-collapse">
               <thead>
                 <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                  <th className="py-3 px-4 whitespace-nowrap">Asset ID</th>
-                  <th className="py-3 px-4">Asset Name & Serial</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Category & Type</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Assigned To</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Purchase Value</th>
-                  <th className="py-3 px-4 whitespace-nowrap">Status</th>
-                  <th className="py-3 px-4 whitespace-nowrap text-right">Actions</th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('nonComplianceAssets.colAssetId')}
+                  </th>
+                  <th className="py-3 px-4">
+                    {t('nonComplianceAssets.colAssetNameSerial')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('nonComplianceAssets.colCategoryType')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('nonComplianceAssets.colAssignedTo')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('nonComplianceAssets.colPurchaseValue')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap">
+                    {t('nonComplianceAssets.colStatus')}
+                  </th>
+                  <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
+                    {t('nonComplianceAssets.colActions')}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-awn-border text-sm">
@@ -2000,48 +2198,52 @@ export default function NonComplianceAssetsPage({
                         {item.code}
                       </button>
                       <div className="text-[11px] text-awn-text-muted mt-0.5">
-                        {item.companyName}
+                        {t('complianceAssets.docsLinked', {
+                          count: formatNumber(item.selectedDocuments?.length || 0),
+                        })}
                       </div>
                     </td>
                     <td className="py-3.5 px-4 align-middle">
                       <button
                         type="button"
                         onClick={() => handleOpenAssetDetails(item)}
-                        className="font-medium text-awn-text-primary hover:text-awn-primary text-left cursor-pointer"
+                        className="font-medium text-awn-text-primary hover:text-awn-primary text-left rtl:text-right cursor-pointer"
                       >
                         {item.assetIdentification?.assetName ||
-                          'Company Laptop - Dell Latitude 5440'}
+                          item.basicDetails?.assetsType ||
+                          'Non-Compliance Asset'}
                       </button>
                       <div className="text-xs text-awn-text-muted mt-0.5 font-mono tabular-nums">
-                        {item.assetIdentification?.serialNumber || 'SN-123456789'} ·{' '}
-                        {item.assetIdentification?.modelBrand || 'Dell Latitude 5440'}
+                        SN: {item.assetIdentification?.serialNumber || '—'} ·{' '}
+                        {item.assetIdentification?.modelBrand || '—'}
                       </div>
                     </td>
                     <td className="py-3.5 px-4 align-middle whitespace-nowrap">
                       <div className="text-xs font-medium text-awn-text-primary">
-                        {item.basicDetails?.assetsCategory || 'Compliance'}
+                        {item.basicDetails?.assetsCategory || '—'}
                       </div>
                       <div className="text-xs text-awn-text-secondary mt-0.5">
-                        {item.assetIdentification?.assetType || 'Laptop'} ·{' '}
-                        {item.basicDetails?.assetsType || 'Non-Vehicle'}
+                        {getOwnershipTypeLabel(
+                          item.assetIdentification?.assetType || 'Owned'
+                        )}
                       </div>
                     </td>
                     <td className="py-3.5 px-4 align-middle whitespace-nowrap">
                       <div className="text-xs font-medium text-awn-text-primary">
-                        {item.assetIdentification?.assignedTo || 'Unassigned'}
+                        {item.assetIdentification?.assignedTo ||
+                          t('nonComplianceAssets.unassigned')}
                       </div>
                       <div className="text-xs text-awn-text-muted mt-0.5">
-                        {item.financialOwnership?.assetLocation ||
-                          'Riyadh HQ - Floor 3'}
+                        {item.financialOwnership?.assetLocation || '—'}
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap font-mono text-xs text-awn-text-primary tabular-nums">
-                      {item.financialOwnership?.purchaseValueSar || '4,500 SAR'}
+                    <td className="py-3.5 px-4 align-middle whitespace-nowrap font-mono text-xs tabular-nums text-awn-text-primary">
+                      {item.financialOwnership?.purchaseValueSar || '—'}
                     </td>
                     <td className="py-3.5 px-4 align-middle whitespace-nowrap">
                       <StatusBadge label={item.status} tone={item.statusTone} />
                     </td>
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right">
+                    <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right rtl:text-left">
                       <div className="inline-flex items-center justify-end gap-1.5">
                         <Button
                           variant="outline"
@@ -2049,7 +2251,7 @@ export default function NonComplianceAssetsPage({
                           leftIcon={<Eye className="w-3.5 h-3.5" />}
                           onClick={() => handleOpenAssetDetails(item)}
                         >
-                          Asset Details
+                          {t('nonComplianceAssets.assetDetails')}
                         </Button>
                         <Button
                           variant={item.status === 'Draft' ? 'gold' : 'outline'}
@@ -2057,7 +2259,9 @@ export default function NonComplianceAssetsPage({
                           leftIcon={<Pencil className="w-3.5 h-3.5" />}
                           onClick={() => handleEditExistingAsset(item)}
                         >
-                          {item.status === 'Draft' ? 'Continue Draft' : 'Edit'}
+                          {item.status === 'Draft'
+                            ? t('nonComplianceAssets.continueDraft')
+                            : t('nonComplianceAssets.edit')}
                         </Button>
                       </div>
                     </td>
