@@ -1,3 +1,5 @@
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
 import { commonEn } from './en/common.ts';
 import { commonAr } from './ar/common.ts';
 import { navigationEn } from './en/navigation.ts';
@@ -38,6 +40,21 @@ export const translations = {
     assetStatus: assetStatusAr,
   },
 } as const;
+
+// Initialize i18next as standard localization engine
+i18n.use(initReactI18next).init({
+  resources: {
+    en: { translation: translations.en },
+    ar: { translation: translations.ar },
+  },
+  lng: typeof window !== 'undefined' ? (window.localStorage.getItem('awn-language') || 'en') : 'en',
+  fallbackLng: 'en',
+  interpolation: {
+    escapeValue: false,
+  },
+});
+
+export default i18n;
 
 const ARABIC_MONTHS = [
   'يناير',
@@ -146,5 +163,5 @@ export function translate(
     });
   }
 
-  return text;
+  return typeof text === 'string' ? text : key;
 }

@@ -87,21 +87,6 @@ export default function FoundationShowcasePage() {
             </Button>
           </div>
         }
-        primaryAction={
-          <Button
-            variant="primary"
-            leftIcon={<Bell className="w-4 h-4" />}
-            onClick={() =>
-              showToast({
-                title: 'Foundation Verified',
-                description: `Active theme is ${theme.toUpperCase()} mode. All semantic tokens are synchronized.`,
-                variant: 'success',
-              })
-            }
-          >
-            Trigger Verification Toast
-          </Button>
-        }
       />
 
       <Card

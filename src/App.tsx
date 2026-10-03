@@ -1,4 +1,7 @@
 import React, { Suspense, lazy } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/queryClient.ts';
 import { ThemeProvider } from './hooks/useTheme.tsx';
 import { ToastProvider } from './hooks/useToast.tsx';
 import { LanguageProvider } from './hooks/useLanguage.tsx';
@@ -31,25 +34,19 @@ function ModuleWorkspaceRouter() {
           </div>
         }
       >
-        {currentRoute?.id === 'dashboard' ? (
-          <DashboardPage onNavigate={navigate} />
-        ) : currentRoute?.id === 'assets-group' ? (
-          <AssetsWorkspacePage onNavigate={navigate} />
-        ) : currentRoute?.id === 'compliance-assets' ? (
-          <ComplianceAssetsPage queryParams={queryParams} onNavigate={navigate} />
-        ) : currentRoute?.id === 'non-compliance-assets' ? (
-          <NonComplianceAssetsPage queryParams={queryParams} onNavigate={navigate} />
-        ) : currentRoute?.id === 'asset-categories' ? (
-          <AssetCategoriesPage />
-        ) : currentRoute?.id === 'asset-types' ? (
-          <AssetTypesPage />
-        ) : currentRoute?.id === 'asset-tags' ? (
-          <AssetTagsPage />
-        ) : currentRoute?.id === 'asset-status' ? (
-          <AssetStatusPage />
-        ) : (
-          <WorkspacePlaceholderPage currentRoute={currentRoute} onNavigate={navigate} />
-        )}
+        <Routes>
+          <Route path="/" element={<Navigate to="/assets/registry" replace />} />
+          <Route path="/assets" element={<Navigate to="/assets/registry" replace />} />
+          <Route path="/assets/dashboard" element={<DashboardPage onNavigate={navigate} />} />
+          <Route path="/assets/registry" element={<AssetsWorkspacePage onNavigate={navigate} />} />
+          <Route path="/assets/compliance" element={<ComplianceAssetsPage queryParams={queryParams} onNavigate={navigate} />} />
+          <Route path="/assets/non-compliance" element={<NonComplianceAssetsPage queryParams={queryParams} onNavigate={navigate} />} />
+          <Route path="/assets/master/categories" element={<AssetCategoriesPage />} />
+          <Route path="/assets/master/types" element={<AssetTypesPage />} />
+          <Route path="/assets/master/tags" element={<AssetTagsPage />} />
+          <Route path="/assets/master/status" element={<AssetStatusPage />} />
+          <Route path="*" element={<WorkspacePlaceholderPage currentRoute={currentRoute} onNavigate={navigate} />} />
+        </Routes>
       </Suspense>
     </AppShell>
   );
@@ -57,14 +54,16 @@ function ModuleWorkspaceRouter() {
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <ThemeProvider>
-        <ToastProvider>
-          <RouterProvider>
-            <ModuleWorkspaceRouter />
-          </RouterProvider>
-        </ToastProvider>
-      </ThemeProvider>
-    </LanguageProvider>
+    <QueryClientProvider client={queryClient}>
+      <LanguageProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <RouterProvider>
+              <ModuleWorkspaceRouter />
+            </RouterProvider>
+          </ToastProvider>
+        </ThemeProvider>
+      </LanguageProvider>
+    </QueryClientProvider>
   );
 }

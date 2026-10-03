@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './Button.tsx';
 import type { ModalSize } from '../../types/ui.ts';
 
@@ -39,56 +40,66 @@ export function Modal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
   const maxWidthClass = SIZE_MAP[size] || SIZE_MAP.md;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-    >
-      <div
-        className="fixed inset-0 transition-opacity"
-        style={{ backgroundColor: 'var(--awn-backdrop)' }}
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      <div
-        className={`relative z-10 w-full ${maxWidthClass} bg-awn-surface border border-awn-border rounded-lg overflow-hidden`}
-        style={{ boxShadow: 'var(--awn-shadow-overlay)' }}
-      >
-        <div className="px-5 py-4 border-b border-awn-border flex items-start justify-between gap-4">
-          <div>
-            <h2 id="modal-title" className="text-base font-semibold text-awn-text-primary">
-              {title}
-            </h2>
-            {description && (
-              <p className="text-xs text-awn-text-secondary mt-1">{description}</p>
-            )}
-          </div>
-          <button
-            type="button"
+    <AnimatePresence>
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+        >
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0"
+            style={{ backgroundColor: 'var(--awn-backdrop)' }}
             onClick={onClose}
-            aria-label="Close dialog"
-            className="p-1 rounded-md text-awn-text-muted hover:text-awn-text-primary hover:bg-awn-surface-alt cursor-pointer"
+            aria-hidden="true"
+          />
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98, y: 6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: 6 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className={`relative z-10 w-full ${maxWidthClass} bg-awn-surface border border-awn-border rounded-lg overflow-hidden`}
+            style={{ boxShadow: 'var(--awn-shadow-overlay)' }}
           >
-            <X className="w-4 h-4" />
-          </button>
+            <div className="px-5 py-4 border-b border-awn-border flex items-start justify-between gap-4">
+              <div>
+                <h2 id="modal-title" className="text-base font-semibold text-awn-text-primary">
+                  {title}
+                </h2>
+                {description && (
+                  <p className="text-xs text-awn-text-secondary mt-1">{description}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close dialog"
+                className="p-1 rounded-md text-awn-text-muted hover:text-awn-text-primary hover:bg-awn-surface-alt cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 max-h-[75vh] overflow-y-auto">{children}</div>
+
+            {footer && (
+              <div className="px-5 py-3.5 bg-awn-surface-alt border-t border-awn-border flex items-center justify-end gap-2.5">
+                {footer}
+              </div>
+            )}
+          </motion.div>
         </div>
-
-        <div className="p-5 max-h-[75vh] overflow-y-auto">{children}</div>
-
-        {footer && (
-          <div className="px-5 py-3.5 bg-awn-surface-alt border-t border-awn-border flex items-center justify-end gap-2.5">
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }
 

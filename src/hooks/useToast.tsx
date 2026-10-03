@@ -1,45 +1,67 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
-import { ToastContainer } from '../components/ui/Toast.tsx';
-import type { ToastContextValue, ToastInput, ToastItem } from '../types/ui.ts';
+import React, { useCallback } from 'react';
+import { toast, Toaster } from 'sonner';
+import { useLanguageStore } from '../store/useLanguageStore.ts';
+import { useThemeStore } from '../store/useThemeStore.ts';
+import type { ToastContextValue, ToastInput } from '../types/ui.ts';
 
-const ToastContext = createContext<ToastContextValue>({
-  showToast: () => {},
-  dismissToast: () => {},
-});
-
-interface ToastProviderProps {
-  children: React.ReactNode;
-}
-
-export function ToastProvider({ children }: ToastProviderProps) {
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-
-  const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((item) => item.id !== id));
-  }, []);
-
-  const showToast = useCallback(
-    ({ title, description, variant = 'success', duration = 4500 }: ToastInput) => {
-      const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      setToasts((prev) => [...prev, { id, title, description, variant }]);
-
-      if (duration > 0) {
-        setTimeout(() => {
-          dismissToast(id);
-        }, duration);
-      }
-    },
-    [dismissToast]
-  );
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const dir = useLanguageStore((state) => state.dir);
+  const theme = useThemeStore((state) => state.theme);
 
   return (
-    <ToastContext.Provider value={{ showToast, dismissToast }}>
+    <>
       {children}
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-    </ToastContext.Provider>
+      <Toaster
+        richColors
+        position="top-right"
+        dir={dir}
+        theme={theme}
+        toastOptions={{
+          className: 'awn-sonner-toast font-sans text-xs',
+        }}
+      />
+    </>
   );
 }
 
 export function useToast(): ToastContextValue {
-  return useContext(ToastContext);
+  const showToast = useCallback(
+    ({ title, description, variant = 'success', duration = 4000 }: ToastInput) => {
+      const opts = {
+        description,
+        duration,
+      };
+
+      switch (variant) {
+        case 'success':
+          toast.success(title, opts);
+          break;
+        case 'error':
+          toast.error(title, opts);
+          break;
+        case 'warning':
+          toast.warning(title, opts);
+          break;
+        case 'info':
+          toast.info(title, opts);
+          break;
+        default:
+          toast(title, opts);
+      }
+    },
+    []
+  );
+
+  const dismissToast = useCallback((id?: string) => {
+    if (id) {
+      toast.dismiss(id);
+    } else {
+      toast.dismiss();
+    }
+  }, []);
+
+  return {
+    showToast,
+    dismissToast,
+  };
 }

@@ -1,66 +1,32 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useLanguageStore } from '../store/useLanguageStore.ts';
 import type { AppLanguage, LanguageContextValue } from '../i18n/types.ts';
 import { formatLocalizedDate, formatLocalizedNumber, translate } from '../i18n/index.ts';
 
-const STORAGE_KEY = 'awn-language';
-
-const LanguageContext = createContext<LanguageContextValue>({
-  language: 'en',
-  isRtl: false,
-  dir: 'ltr',
-  setLanguage: () => {},
-  toggleLanguage: () => {},
-  t: (key: string) => key,
-  formatDate: (d: string) => d,
-  formatNumber: (n: number | string) => String(n),
-});
-
-interface LanguageProviderProps {
-  children: React.ReactNode;
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  // Language synchronization and DOM attributes are managed via useLanguageStore & i18next
+  return <>{children}</>;
 }
 
-export function LanguageProvider({ children }: LanguageProviderProps) {
-  const [language, setLanguageState] = useState<AppLanguage>(() => {
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved === 'ar' || saved === 'en') {
-        return saved;
-      }
-    } catch {
-      // Ignore storage access errors
-    }
-    return 'en';
-  });
+export function useLanguage(): LanguageContextValue {
+  const language = useLanguageStore((state) => state.language);
+  const isRtl = useLanguageStore((state) => state.isRtl);
+  const dir = useLanguageStore((state) => state.dir);
+  const setLanguage = useLanguageStore((state) => state.setLanguage);
+  const toggleLanguage = useLanguageStore((state) => state.toggleLanguage);
 
-  const isRtl = language === 'ar';
-  const dir = isRtl ? 'rtl' : 'ltr';
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute('dir', dir);
-    root.setAttribute('lang', language);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, language);
-    } catch {
-      // Ignore storage write errors
-    }
-  }, [language, dir]);
-
-  const setLanguage = useCallback((lang: AppLanguage) => {
-    if (lang === 'en' || lang === 'ar') {
-      setLanguageState(lang);
-    }
-  }, []);
-
-  const toggleLanguage = useCallback(() => {
-    setLanguageState((prev) => (prev === 'en' ? 'ar' : 'en'));
-  }, []);
+  const { t: i18nTranslate } = useTranslation();
 
   const t = useCallback(
-    (key: string, params?: Record<string, string | number>) => {
-      return translate(language, key, params);
+    (key: string, params?: Record<string, string | number>): string => {
+      // First try dictionary translate with namespace fallback, then i18next
+      const direct = translate(language, key, params);
+      if (direct && direct !== key) return direct;
+      const fallback = i18nTranslate(key, params as any);
+      return typeof fallback === 'string' ? fallback : key;
     },
-    [language]
+    [language, i18nTranslate]
   );
 
   const formatDate = useCallback(
@@ -74,24 +40,14 @@ export function LanguageProvider({ children }: LanguageProviderProps) {
     return formatLocalizedNumber(val);
   }, []);
 
-  return (
-    <LanguageContext.Provider
-      value={{
-        language,
-        isRtl,
-        dir,
-        setLanguage,
-        toggleLanguage,
-        t,
-        formatDate,
-        formatNumber,
-      }}
-    >
-      {children}
-    </LanguageContext.Provider>
-  );
-}
-
-export function useLanguage(): LanguageContextValue {
-  return useContext(LanguageContext);
+  return {
+    language,
+    isRtl,
+    dir,
+    setLanguage,
+    toggleLanguage,
+    t,
+    formatDate,
+    formatNumber,
+  };
 }
