@@ -951,6 +951,148 @@ export default function ComplianceAssetsPage({
     }
   };
 
+  const complianceColumns = useMemo<ColumnDef<typeof dataTableFeatures, ComplianceAsset>[]>(
+    () => [
+      {
+        id: 'code',
+        accessorKey: 'code',
+        header: () => t('complianceAssets.colAssetId'),
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={() => handleOpenAssetDetails(row.original)}
+            className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
+          >
+            {row.original.code}
+          </button>
+        ),
+      },
+      {
+        id: 'vehicleInfo',
+        header: () => t('complianceAssets.colVehicleAssetPlate'),
+        cell: ({ row }) => {
+          const item = row.original;
+          const brand = item.registrationDetails?.brand || item.basicDetails?.assetsType || '—';
+          const plateEn = item.vehicleInfo?.plateNumberEn || t('complianceAssets.noPlate');
+          const plateAr = item.vehicleInfo?.plateNumberAr;
+          return (
+            <div className="space-y-0.5">
+              <div className="font-medium text-awn-text-primary text-xs">{brand}</div>
+              <div className="font-mono text-[11px] text-awn-text-muted flex items-center gap-1.5 tabular-nums">
+                <span>{plateEn}</span>
+                {plateAr && (
+                  <>
+                    <span>·</span>
+                    <span className="font-sans">{plateAr}</span>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        id: 'customerBusiness',
+        header: () => t('complianceAssets.colCustomerBusiness'),
+        cell: ({ row }) => {
+          const item = row.original;
+          const customer = item.basicDetails?.customer || '—';
+          const business = item.basicDetails?.business;
+          return (
+            <div className="space-y-0.5">
+              <div className="text-xs text-awn-text-primary truncate max-w-[180px]">{customer}</div>
+              {business && (
+                <div className="text-[11px] text-awn-text-muted truncate max-w-[180px]">{business}</div>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        id: 'driver',
+        header: () => t('complianceAssets.colAssignedDriver'),
+        cell: ({ row }) => {
+          const item = row.original;
+          const driverName = item.driverInfo?.driverName || t('complianceAssets.unassigned');
+          const driverId = item.driverInfo?.driverId;
+          return (
+            <div className="space-y-0.5">
+              <div className="text-xs text-awn-text-primary">{driverName}</div>
+              {driverId && (
+                <div className="font-mono text-[11px] text-awn-text-muted tabular-nums">ID: {driverId}</div>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        id: 'documents',
+        header: () => t('complianceAssets.documents'),
+        cell: ({ row }) => {
+          const docs = row.original.selectedDocuments || [];
+          return (
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-awn-text-secondary bg-awn-surface-alt border border-awn-border px-2 py-0.5 rounded">
+              <FileCheck2 className="w-3.5 h-3.5 text-awn-primary" />
+              <span>{t('complianceAssets.docsLinked', { count: docs.length })}</span>
+            </span>
+          );
+        },
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: () => t('complianceAssets.colStatus'),
+        cell: ({ row }) => {
+          const item = row.original;
+          const isDraft = item.status === 'Draft';
+          const isRetired = item.status === 'Retired';
+          const displayLabel = isRtl
+            ? isRetired
+              ? t('complianceAssets.filterRetired')
+              : isDraft
+              ? t('complianceAssets.filterDraft')
+              : t('complianceAssets.filterActive')
+            : item.status;
+          return <StatusBadge label={displayLabel} tone={item.statusTone} />;
+        },
+      },
+      {
+        id: 'actions',
+        header: () => (
+          <span className="block text-right rtl:text-left">
+            {t('complianceAssets.colActions')}
+          </span>
+        ),
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <button
+                type="button"
+                onClick={() => handleOpenAssetDetails(item)}
+                title={t('complianceAssets.assetDetails')}
+                aria-label={t('complianceAssets.assetDetails')}
+                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleEditExistingAsset(item)}
+                title={item.status === 'Draft' ? t('complianceAssets.continueDraft') : t('complianceAssets.edit')}
+                aria-label={item.status === 'Draft' ? t('complianceAssets.continueDraft') : t('complianceAssets.edit')}
+                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        },
+      },
+    ],
+    [handleEditExistingAsset, handleOpenAssetDetails, isRtl, t]
+  );
+
   // ============================================================================
   // STEP 1: CHOOSE DOCUMENTS
   // ============================================================================

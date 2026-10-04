@@ -4,6 +4,7 @@ import {
   useTable,
   rowPaginationFeature,
   rowSelectionFeature,
+  columnVisibilityFeature,
   type ColumnDef,
   type PaginationState,
   type RowSelectionState,
@@ -33,6 +34,7 @@ import { formatLocalizedNumber } from '../../i18n/index.ts';
 export const dataTableFeatures = tableFeatures({
   rowPaginationFeature,
   rowSelectionFeature,
+  columnVisibilityFeature,
 });
 
 export type DataTableProps<TData extends RowData = RowData> = {
@@ -61,31 +63,6 @@ export type DataTableProps<TData extends RowData = RowData> = {
   subtitle?: string;
   toolbarSlot?: React.ReactNode;
 };
-
-/**
- * Helper to safely extract visible cells from a row.
- * Uses visible cells when supported or filters by column visibility.
- */
-function getRowVisibleCells<TFeatures extends TableFeatures, TData extends RowData>(
-  row: Row<TFeatures, TData>
-): Array<Cell<TFeatures, TData, unknown>> {
-  if (
-    'getVisibleCells' in row &&
-    typeof (row as { getVisibleCells?: () => Array<Cell<TFeatures, TData, unknown>> }).getVisibleCells === 'function'
-  ) {
-    return (row as { getVisibleCells: () => Array<Cell<TFeatures, TData, unknown>> }).getVisibleCells();
-  }
-
-  return row.getAllCells().filter((cell) => {
-    if (
-      'getIsVisible' in cell.column &&
-      typeof (cell.column as { getIsVisible?: () => boolean }).getIsVisible === 'function'
-    ) {
-      return (cell.column as { getIsVisible: () => boolean }).getIsVisible();
-    }
-    return true;
-  });
-}
 
 /**
  * Generic, reusable DataTable component built on TanStack Table v9.
@@ -305,7 +282,6 @@ export function DataTable<TData extends RowData = RowData>({
             </thead>
             <tbody className="divide-y divide-awn-border text-sm">
               {table.getRowModel().rows.map((row) => {
-                const cells = getRowVisibleCells(row);
                 const isSelected = row.getIsSelected?.();
 
                 return (
@@ -315,7 +291,7 @@ export function DataTable<TData extends RowData = RowData>({
                       isSelected ? 'bg-awn-primary-soft/40' : ''
                     }`}
                   >
-                    {cells.map((cell) => (
+                    {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
                         className="py-3 px-4 align-middle whitespace-nowrap text-awn-text-primary"

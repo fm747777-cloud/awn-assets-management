@@ -31,6 +31,8 @@ import { StatusBadge } from '../components/ui/StatusBadge.tsx';
 import { ConfirmDialog, Modal } from '../components/ui/Modal.tsx';
 import { EmptyState } from '../components/ui/EmptyState.tsx';
 import { TableSkeleton } from '../components/ui/LoadingState.tsx';
+import { DataTable, dataTableFeatures } from '../components/table/DataTable.tsx';
+import type { ColumnDef } from '@tanstack/react-table';
 import type {
   NonComplianceAsset,
   NonComplianceAssetFormData,
@@ -475,6 +477,12 @@ export default function NonComplianceAssetsPage({
   const [loadingList, setLoadingList] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [pageIndex, setPageIndex] = useState(0);
+  const pageSize = 8;
+
+  const paginatedNonComplianceList = useMemo(() => {
+    return nonComplianceList.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
+  }, [nonComplianceList, pageIndex, pageSize]);
 
   // Choose Documents State
   // Default Selected Documents: Financial & Ownership Details, Warranty Document
@@ -946,6 +954,157 @@ export default function NonComplianceAssetsPage({
         getNonComplianceDocTitle(d.id).toLowerCase().includes(q)
     );
   }, [docOptions, documentSearchQuery, getNonComplianceDocTitle]);
+
+  const columns = useMemo<ColumnDef<typeof dataTableFeatures, NonComplianceAsset>[]>(
+    () => [
+      {
+        id: 'code',
+        accessorKey: 'code',
+        header: () => t('nonComplianceAssets.colAssetId'),
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div>
+              <button
+                type="button"
+                onClick={() => handleOpenAssetDetails(item)}
+                className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
+              >
+                {item.code}
+              </button>
+              <div className="text-[11px] text-awn-text-muted mt-0.5">
+                {t('complianceAssets.docsLinked', {
+                  count: formatNumber(item.selectedDocuments?.length || 0),
+                })}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        id: 'assetNameSerial',
+        header: () => t('nonComplianceAssets.colAssetNameSerial'),
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div>
+              <button
+                type="button"
+                onClick={() => handleOpenAssetDetails(item)}
+                className="font-medium text-awn-text-primary hover:text-awn-primary text-left rtl:text-right cursor-pointer"
+              >
+                {item.assetIdentification?.assetName ||
+                  item.basicDetails?.assetsType ||
+                  'Non-Compliance Asset'}
+              </button>
+              <div className="text-xs text-awn-text-muted mt-0.5 font-mono tabular-nums">
+                SN: {item.assetIdentification?.serialNumber || '—'} ·{' '}
+                {item.assetIdentification?.modelBrand || '—'}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        id: 'categoryType',
+        header: () => t('nonComplianceAssets.colCategoryType'),
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div>
+              <div className="text-xs font-medium text-awn-text-primary">
+                {item.basicDetails?.assetsCategory || '—'}
+              </div>
+              <div className="text-xs text-awn-text-secondary mt-0.5">
+                {getOwnershipTypeLabel(
+                  item.assetIdentification?.assetType || 'Owned'
+                )}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        id: 'assignedTo',
+        header: () => t('nonComplianceAssets.colAssignedTo'),
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div>
+              <div className="text-xs font-medium text-awn-text-primary">
+                {item.assetIdentification?.assignedTo ||
+                  t('nonComplianceAssets.unassigned')}
+              </div>
+              <div className="text-xs text-awn-text-muted mt-0.5">
+                {item.financialOwnership?.assetLocation || '—'}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        id: 'purchaseValue',
+        header: () => t('nonComplianceAssets.colPurchaseValue'),
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <span className="font-mono text-xs tabular-nums text-awn-text-primary">
+              {item.financialOwnership?.purchaseValueSar || '—'}
+            </span>
+          );
+        },
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: () => t('nonComplianceAssets.colStatus'),
+        cell: ({ row }) => {
+          const item = row.original;
+          return <StatusBadge label={item.status} tone={item.statusTone} />;
+        },
+      },
+      {
+        id: 'actions',
+        header: () => (
+          <span className="block text-right rtl:text-left">
+            {t('nonComplianceAssets.colActions')}
+          </span>
+        ),
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <div className="flex items-center justify-end gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                leftIcon={<Eye className="w-3.5 h-3.5" />}
+                onClick={() => handleOpenAssetDetails(item)}
+              >
+                {t('nonComplianceAssets.assetDetails')}
+              </Button>
+              <Button
+                variant={item.status === 'Draft' ? 'gold' : 'outline'}
+                size="sm"
+                leftIcon={<Pencil className="w-3.5 h-3.5" />}
+                onClick={() => handleEditExistingAsset(item)}
+              >
+                {item.status === 'Draft'
+                  ? t('nonComplianceAssets.continueDraft')
+                  : t('nonComplianceAssets.edit')}
+              </Button>
+            </div>
+          );
+        },
+      },
+    ],
+    [
+      formatNumber,
+      getOwnershipTypeLabel,
+      handleEditExistingAsset,
+      handleOpenAssetDetails,
+      t,
+    ]
+  );
 
   // ============================================================================
   // STEP 2: CHOOSE DOCUMENTS
@@ -2108,19 +2267,24 @@ export default function NonComplianceAssetsPage({
       />
 
       {/* Main Table */}
-      <div className="bg-awn-surface border border-awn-border rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="w-full sm:w-80">
-            <Input
-              placeholder={t('nonComplianceAssets.searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onClear={() => setSearchQuery('')}
-              leftIcon={<Search className="w-4 h-4" />}
-              aria-label={t('nonComplianceAssets.searchAria')}
-            />
-          </div>
-
+      <DataTable
+        title={t('nonComplianceAssets.title')}
+        columns={columns}
+        data={paginatedNonComplianceList}
+        count={nonComplianceList.length}
+        loading={loadingList}
+        pageIndex={pageIndex}
+        pageSize={pageSize}
+        onPageChange={setPageIndex}
+        searchValue={searchQuery}
+        onSearchChange={(val) => {
+          setSearchQuery(val);
+          setPageIndex(0);
+        }}
+        searchPlaceholder={t('nonComplianceAssets.searchPlaceholder')}
+        onAddNew={handleStartNewNonComplianceAsset}
+        addNewLabel={t('nonComplianceAssets.addNewNonCompliance')}
+        toolbarSlot={
           <div
             role="group"
             aria-label="Filter non-compliance assets by status"
@@ -2132,7 +2296,10 @@ export default function NonComplianceAssetsPage({
                 <button
                   key={st}
                   type="button"
-                  onClick={() => setStatusFilter(st)}
+                  onClick={() => {
+                    setStatusFilter(st);
+                    setPageIndex(0);
+                  }}
                   className={`px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
                     active
                       ? 'bg-awn-surface text-awn-primary font-semibold border border-awn-border'
@@ -2144,134 +2311,8 @@ export default function NonComplianceAssetsPage({
               );
             })}
           </div>
-        </div>
-
-        {loadingList ? (
-          <TableSkeleton rows={4} columns={7} />
-        ) : nonComplianceList.length === 0 ? (
-          <EmptyState
-            title={t('nonComplianceAssets.noAssetsFound')}
-            description={t('nonComplianceAssets.noAssetsDesc')}
-            primaryActionLabel={t('nonComplianceAssets.addNewNonCompliance')}
-            onPrimaryAction={handleStartNewNonComplianceAsset}
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left rtl:text-right border-collapse">
-              <thead>
-                <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                  <th className="py-3 px-4 whitespace-nowrap">
-                    {t('nonComplianceAssets.colAssetId')}
-                  </th>
-                  <th className="py-3 px-4">
-                    {t('nonComplianceAssets.colAssetNameSerial')}
-                  </th>
-                  <th className="py-3 px-4 whitespace-nowrap">
-                    {t('nonComplianceAssets.colCategoryType')}
-                  </th>
-                  <th className="py-3 px-4 whitespace-nowrap">
-                    {t('nonComplianceAssets.colAssignedTo')}
-                  </th>
-                  <th className="py-3 px-4 whitespace-nowrap">
-                    {t('nonComplianceAssets.colPurchaseValue')}
-                  </th>
-                  <th className="py-3 px-4 whitespace-nowrap">
-                    {t('nonComplianceAssets.colStatus')}
-                  </th>
-                  <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
-                    {t('nonComplianceAssets.colActions')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-awn-border text-sm">
-                {nonComplianceList.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-awn-surface-alt transition-colors"
-                  >
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenAssetDetails(item)}
-                        className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
-                      >
-                        {item.code}
-                      </button>
-                      <div className="text-[11px] text-awn-text-muted mt-0.5">
-                        {t('complianceAssets.docsLinked', {
-                          count: formatNumber(item.selectedDocuments?.length || 0),
-                        })}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 align-middle">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenAssetDetails(item)}
-                        className="font-medium text-awn-text-primary hover:text-awn-primary text-left rtl:text-right cursor-pointer"
-                      >
-                        {item.assetIdentification?.assetName ||
-                          item.basicDetails?.assetsType ||
-                          'Non-Compliance Asset'}
-                      </button>
-                      <div className="text-xs text-awn-text-muted mt-0.5 font-mono tabular-nums">
-                        SN: {item.assetIdentification?.serialNumber || '—'} ·{' '}
-                        {item.assetIdentification?.modelBrand || '—'}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                      <div className="text-xs font-medium text-awn-text-primary">
-                        {item.basicDetails?.assetsCategory || '—'}
-                      </div>
-                      <div className="text-xs text-awn-text-secondary mt-0.5">
-                        {getOwnershipTypeLabel(
-                          item.assetIdentification?.assetType || 'Owned'
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                      <div className="text-xs font-medium text-awn-text-primary">
-                        {item.assetIdentification?.assignedTo ||
-                          t('nonComplianceAssets.unassigned')}
-                      </div>
-                      <div className="text-xs text-awn-text-muted mt-0.5">
-                        {item.financialOwnership?.assetLocation || '—'}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap font-mono text-xs tabular-nums text-awn-text-primary">
-                      {item.financialOwnership?.purchaseValueSar || '—'}
-                    </td>
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                      <StatusBadge label={item.status} tone={item.statusTone} />
-                    </td>
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right rtl:text-left">
-                      <div className="inline-flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          leftIcon={<Eye className="w-3.5 h-3.5" />}
-                          onClick={() => handleOpenAssetDetails(item)}
-                        >
-                          {t('nonComplianceAssets.assetDetails')}
-                        </Button>
-                        <Button
-                          variant={item.status === 'Draft' ? 'gold' : 'outline'}
-                          size="sm"
-                          leftIcon={<Pencil className="w-3.5 h-3.5" />}
-                          onClick={() => handleEditExistingAsset(item)}
-                        >
-                          {item.status === 'Draft'
-                            ? t('nonComplianceAssets.continueDraft')
-                            : t('nonComplianceAssets.edit')}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        }
+      />
     </div>
   );
 }

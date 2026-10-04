@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, ArrowRight, Eye, RefreshCw } from 'lucide-react';
 import { assetModuleService } from '../services/assetModuleService.ts';
 import { useToast } from '../hooks/useToast.tsx';
 import { useLanguage } from '../hooks/useLanguage.tsx';
 import { PageHeader } from '../components/ui/PageHeader.tsx';
 import { Button } from '../components/ui/Button.tsx';
-import { DataTable } from '../components/ui/DataTable.tsx';
+import { DataTable, dataTableFeatures } from '../components/table/DataTable.tsx';
+import type { ColumnDef } from '@tanstack/react-table';
 import { StatusBadge } from '../components/ui/StatusBadge.tsx';
 import { Drawer } from '../components/ui/Drawer.tsx';
 import { MetricStripSkeleton } from '../components/ui/LoadingState.tsx';
@@ -85,6 +86,122 @@ export default function WorkspacePlaceholderPage({
       : ['/assets/compliance', '/assets/non-compliance'].includes(currentRoute?.path || '')
       ? SUB_NAVIGATION_GROUPS.assets
       : null;
+
+  const statusFilterTabs = useMemo(
+    () => [
+      { id: 'ALL', label: isRtl ? 'كافة السجلات' : 'All Records' },
+      { id: 'success', label: isRtl ? 'نشط / متوافق' : 'Active / Compliant' },
+      { id: 'warning', label: isRtl ? 'متابعة / مستحق' : 'Attention / Due' },
+      { id: 'info', label: isRtl ? 'متاح / مراجعة' : 'Available / Review' },
+    ],
+    [isRtl]
+  );
+
+  const columns = useMemo<ColumnDef<typeof dataTableFeatures, WorkspaceRecordItem>[]>(
+    () => [
+      {
+        id: 'code',
+        accessorKey: 'code',
+        header: () => (isRtl ? 'رمز السجل' : 'Reference ID'),
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={() => setSelectedRecord(row.original)}
+            className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
+          >
+            {row.original.code}
+          </button>
+        ),
+      },
+      {
+        id: 'name',
+        accessorKey: 'name',
+        header: () => (isRtl ? 'اسم الأصل والسجل' : 'Record Designation'),
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium text-awn-text-primary leading-snug">
+              {row.original.name}
+            </div>
+            <div className="text-xs text-awn-text-muted mt-0.5 flex items-center gap-1.5">
+              <span>{row.original.classification}</span>
+              <span aria-hidden="true">·</span>
+              <span className="font-mono tabular-nums">{row.original.serialNumber}</span>
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'categoryType',
+        header: () => (isRtl ? 'التصنيف والنوع' : 'Category & Type'),
+        cell: ({ row }) => (
+          <div>
+            <div className="text-xs font-medium text-awn-text-primary">
+              {row.original.category}
+            </div>
+            <div className="text-xs text-awn-text-secondary mt-0.5">
+              {row.original.type}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'locationCustodian',
+        header: () => (isRtl ? 'الموقع وأمين العهدة' : 'Location & Custodian'),
+        cell: ({ row }) => (
+          <div>
+            <div className="text-xs text-awn-text-primary">{row.original.location}</div>
+            <div className="text-xs text-awn-text-secondary mt-0.5">
+              {row.original.custodian}
+            </div>
+          </div>
+        ),
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: () => (isRtl ? 'الحالة' : 'Status'),
+        cell: ({ row }) => (
+          <StatusBadge label={row.original.status} tone={row.original.statusTone} />
+        ),
+      },
+      {
+        id: 'updatedAt',
+        accessorKey: 'updatedAt',
+        header: () => (
+          <span className="block text-right rtl:text-left">
+            {isRtl ? 'آخر تحديث' : 'Last Updated'}
+          </span>
+        ),
+        cell: ({ row }) => (
+          <span className="block font-mono text-xs text-awn-text-secondary tabular-nums text-right rtl:text-left">
+            {row.original.updatedAt}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => (
+          <span className="block text-right rtl:text-left">
+            {isRtl ? 'الإجراءات' : 'Actions'}
+          </span>
+        ),
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end gap-1">
+            <button
+              type="button"
+              onClick={() => setSelectedRecord(row.original)}
+              title={isRtl ? 'معاينة السجل' : 'Inspect details'}
+              aria-label={`Inspect ${row.original.name}`}
+              className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-surface border border-transparent hover:border-awn-border cursor-pointer transition-colors"
+            >
+              <Eye className="w-4 h-4" />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [isRtl]
+  );
 
   return (
     <div className="space-y-6">
@@ -171,40 +288,66 @@ export default function WorkspacePlaceholderPage({
       <DataTable
         title={isRtl ? `${currentRoute?.arabicLabel || currentRoute?.label} (معاينة السجلات)` : `${currentRoute?.label} Preview`}
         subtitle={isRtl ? 'نقطة دخول مجهزة لمنظومة الأصول. سيتم ربط المسارات التشغيلية الكاملة لهذا القسم في المرحلة القادمة.' : 'Prepared navigation entry point. Full business workflows for this sub-module will connect in the upcoming phase.'}
-        items={workspaceData.items}
+        columns={columns}
+        data={workspaceData.items}
+        count={workspaceData.pagination.totalItems}
         loading={loading}
-        searchQuery={searchQuery}
+        pageIndex={currentPage - 1}
+        pageSize={5}
+        onPageChange={(newPageIndex) => setCurrentPage(newPageIndex + 1)}
+        searchValue={searchQuery}
         onSearchChange={(val) => {
           setSearchQuery(val);
           setCurrentPage(1);
         }}
-        statusFilter={statusFilter}
-        onStatusFilterChange={(val) => {
-          setStatusFilter(val);
-          setCurrentPage(1);
-        }}
-        pagination={workspaceData.pagination}
-        onPageChange={(nextPage) => setCurrentPage(nextPage)}
-        onViewRow={(row) => setSelectedRecord(row)}
+        searchPlaceholder={isRtl ? 'البحث بالرمز، الاسم، أمين العهدة...' : 'Search code, name, custodian...'}
         toolbarSlot={
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-            onClick={async () => {
-              await assetModuleService.resetWorkspaceData(workspaceId);
-              setSearchQuery('');
-              setStatusFilter('ALL');
-              await loadWorkspace(1);
-              showToast({
-                title: 'Workspace refreshed',
-                description: `${currentRoute.label} records reloaded.`,
-                variant: 'info',
-              });
-            }}
-          >
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <div
+              role="group"
+              aria-label={isRtl ? 'تصفية السجلات حسب الحالة' : 'Filter records by status'}
+              className="inline-flex flex-wrap items-center gap-1 p-1 rounded-md bg-awn-surface-alt border border-awn-border"
+            >
+              {statusFilterTabs.map((tab) => {
+                const active = statusFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      setStatusFilter(tab.id);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2.5 py-1 text-xs font-medium rounded transition-colors whitespace-nowrap cursor-pointer ${
+                      active
+                        ? 'bg-awn-surface text-awn-primary border border-awn-border font-semibold'
+                        : 'text-awn-text-secondary hover:text-awn-text-primary border border-transparent'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+              onClick={async () => {
+                await assetModuleService.resetWorkspaceData(workspaceId);
+                setSearchQuery('');
+                setStatusFilter('ALL');
+                await loadWorkspace(1);
+                showToast({
+                  title: isRtl ? 'تم تحديث مساحة العمل' : 'Workspace refreshed',
+                  description: `${currentRoute.label} records reloaded.`,
+                  variant: 'info',
+                });
+              }}
+            >
+              {isRtl ? 'تحديث' : 'Refresh'}
+            </Button>
+          </div>
         }
       />
 
