@@ -1,14 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Ban,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Eye,
   FolderTree,
   Pencil,
   Plus,
-  Search,
   Trash2,
 } from 'lucide-react';
 import { assetModuleService } from '../services/assetModuleService.ts';
@@ -21,8 +18,8 @@ import { StatusBadge } from '../components/ui/StatusBadge.tsx';
 import { Drawer } from '../components/ui/Drawer.tsx';
 import { ConfirmDialog, Modal } from '../components/ui/Modal.tsx';
 import { FormSection } from '../components/ui/FormSection.tsx';
-import { EmptyState } from '../components/ui/EmptyState.tsx';
-import { TableSkeleton } from '../components/ui/LoadingState.tsx';
+import { DataTable, dataTableFeatures } from '../components/table/DataTable.tsx';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useLanguage } from '../hooks/useLanguage.tsx';
 import type {
   AssetCategoriesQueryResponse,
@@ -282,6 +279,122 @@ export default function AssetCategoriesPage() {
     });
   };
 
+  const columns = useMemo<ColumnDef<typeof dataTableFeatures, AssetCategory>[]>(
+    () => [
+      {
+        id: 'categoryId',
+        accessorKey: 'categoryId',
+        header: () => (isRtl ? 'رمز التصنيف' : 'Category ID'),
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={() => handleOpenCategoryDetails(row.original)}
+            className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
+          >
+            {row.original.categoryId}
+          </button>
+        ),
+      },
+      {
+        id: 'categoryName',
+        accessorKey: 'categoryName',
+        header: () => (isRtl ? 'اسم التصنيف' : 'Category Name'),
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={() => handleOpenCategoryDetails(row.original)}
+            className="font-medium text-awn-text-primary hover:text-awn-primary text-left rtl:text-right transition-colors cursor-pointer"
+          >
+            {row.original.categoryName}
+          </button>
+        ),
+      },
+      {
+        id: 'description',
+        accessorKey: 'description',
+        header: () => (isRtl ? 'الوصف' : 'Description'),
+        cell: ({ row }) => (
+          <span className="text-xs text-awn-text-secondary max-w-md truncate block">
+            {row.original.description || '—'}
+          </span>
+        ),
+      },
+      {
+        id: 'createdDate',
+        accessorKey: 'createdDate',
+        header: () => (isRtl ? 'تاريخ الإنشاء' : 'Created Date'),
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-awn-text-secondary tabular-nums">
+            {row.original.createdDate}
+          </span>
+        ),
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: () => (isRtl ? 'الحالة' : 'Status'),
+        cell: ({ row }) => (
+          <StatusBadge label={row.original.status} tone={row.original.statusTone} />
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => (
+          <span className="block text-right rtl:text-left">
+            {isRtl ? 'الإجراءات' : 'Actions'}
+          </span>
+        ),
+        cell: ({ row }) => {
+          const category = row.original;
+          const isActive = category.status === 'Active';
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <button
+                type="button"
+                onClick={() => handleOpenCategoryDetails(category)}
+                title={`View ${category.categoryName}`}
+                aria-label={`View ${category.categoryName}`}
+                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenEditModal(category)}
+                title={`Edit ${category.categoryName}`}
+                aria-label={`Edit ${category.categoryName}`}
+                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              {isActive && (
+                <button
+                  type="button"
+                  onClick={() => setDeactivateTarget(category)}
+                  title={`Deactivate ${category.categoryName}`}
+                  aria-label={`Deactivate ${category.categoryName}`}
+                  className="p-1.5 rounded text-awn-text-secondary hover:text-awn-warning hover:bg-awn-warning-soft transition-colors cursor-pointer"
+                >
+                  <Ban className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(category)}
+                title={`Delete ${category.categoryName}`}
+                aria-label={`Delete ${category.categoryName}`}
+                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-error hover:bg-awn-error-soft transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        },
+      },
+    ],
+    [isRtl]
+  );
+
   return (
     <div className="space-y-5">
       {/* Page Header with exact Title, Description, Summary ("89 Asset Categories"), and Actions ("Export CSV", "New Asset") */}
@@ -340,246 +453,33 @@ export default function AssetCategoriesPage() {
         }
       />
 
-      {/* Main Asset Categories Table Container */}
-      <div className="bg-awn-surface border border-awn-border rounded-lg overflow-hidden">
-        {/* Search & Summary Toolbar */}
-        <div className="p-4 border-b border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="w-full sm:w-80">
-            <Input
-              placeholder={
-                isRtl
-                  ? 'البحث برمز التصنيف، الاسم، الوصف...'
-                  : 'Search by Category ID, Category Name, Description...'
-              }
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onClear={() => setSearchQuery('')}
-              leftIcon={<Search className="w-4 h-4" />}
-              aria-label={isRtl ? 'بحث في تصنيفات الأصول' : 'Search asset categories'}
-            />
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-awn-text-secondary">
-            <span className="px-2.5 py-1 rounded-md bg-awn-surface-alt border border-awn-border font-semibold text-awn-text-primary tabular-nums">
-              {isRtl
-                ? `${formatNumber(categoriesData.totalRecordsCount)} تصنيف أصل`
-                : categoriesData.summaryTotalLabel}
-            </span>
-          </div>
-        </div>
-
-        {/* Table Content */}
-        {loading ? (
-          <TableSkeleton rows={5} columns={6} />
-        ) : categoriesData.items.length === 0 ? (
-          <EmptyState
-            title={isRtl ? 'لم يتم العثور على تصنيفات' : 'No Asset Categories Found'}
-            description={
-              searchQuery
-                ? isRtl
-                  ? `لا توجد تصنيفات تطابق "${searchQuery}". جرب إفراغ خانة البحث.`
-                  : `No asset categories matched "${searchQuery}". Try clearing your search query.`
-                : isRtl
-                ? 'لا توجد تصنيفات أصول مسجلة حالياً. انقر على "إضافة تصنيف" للبدء.'
-                : 'No asset categories are currently registered. Click "New Asset" to create your first category.'
-            }
-            primaryActionLabel={
-              searchQuery
-                ? isRtl
-                  ? 'مسح البحث'
-                  : 'Clear Search'
-                : isRtl
-                ? 'إضافة تصنيف'
-                : 'New Asset'
-            }
-            onPrimaryAction={
-              searchQuery ? () => setSearchQuery('') : handleOpenCreateModal
-            }
-          />
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left rtl:text-right border-collapse">
-                <thead>
-                  <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'رمز التصنيف' : 'Category ID'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'اسم التصنيف' : 'Category Name'}
-                    </th>
-                    <th className="py-3 px-4">{isRtl ? 'الوصف' : 'Description'}</th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'تاريخ الإنشاء' : 'Created Date'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'الحالة' : 'Status'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
-                      {isRtl ? 'الإجراءات' : 'Actions'}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-awn-border text-sm">
-                  {categoriesData.items.map((category) => {
-                    const isActive = category.status === 'Active';
-                    return (
-                      <tr
-                        key={category.categoryId}
-                        className="hover:bg-awn-surface-alt transition-colors group"
-                      >
-                        {/* Category ID */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenCategoryDetails(category)}
-                            className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
-                          >
-                            {category.categoryId}
-                          </button>
-                        </td>
-
-                        {/* Category Name */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenCategoryDetails(category)}
-                            className="font-medium text-awn-text-primary hover:text-awn-primary text-left transition-colors cursor-pointer"
-                          >
-                            {category.categoryName}
-                          </button>
-                        </td>
-
-                        {/* Description */}
-                        <td className="py-3.5 px-4 align-middle text-xs text-awn-text-secondary max-w-md">
-                          {category.description || '—'}
-                        </td>
-
-                        {/* Created Date */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap font-mono text-xs text-awn-text-secondary tabular-nums">
-                          {category.createdDate}
-                        </td>
-
-                        {/* Status */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <StatusBadge
-                            label={category.status}
-                            tone={category.statusTone}
-                          />
-                        </td>
-
-                        {/* Row Actions */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right">
-                          <div className="inline-flex items-center justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenCategoryDetails(category)}
-                              title={`View ${category.categoryName}`}
-                              aria-label={`View ${category.categoryName}`}
-                              className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditModal(category)}
-                              title={`Edit ${category.categoryName}`}
-                              aria-label={`Edit ${category.categoryName}`}
-                              className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            {isActive && (
-                              <button
-                                type="button"
-                                onClick={() => setDeactivateTarget(category)}
-                                title={`Deactivate ${category.categoryName}`}
-                                aria-label={`Deactivate ${category.categoryName}`}
-                                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-warning hover:bg-awn-warning-soft transition-colors cursor-pointer"
-                              >
-                                <Ban className="w-4 h-4" />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setDeleteTarget(category)}
-                              title={`Delete ${category.categoryName}`}
-                              aria-label={`Delete ${category.categoryName}`}
-                              className="p-1.5 rounded text-awn-text-secondary hover:text-awn-error hover:bg-awn-error-soft transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination Footer */}
-            <div className="px-4 py-3 border-t border-awn-border bg-awn-surface flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-awn-text-secondary">
-              <div className="tabular-nums">
-                {isRtl ? (
-                  <>
-                    عرض{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {formatNumber(categoriesData.items.length)}
-                    </strong>{' '}
-                    من أصل{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {formatNumber(categoriesData.pagination.totalItems)}
-                    </strong>{' '}
-                    سجل
-                  </>
-                ) : (
-                  <>
-                    Showing{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {categoriesData.items.length}
-                    </strong>{' '}
-                    of{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {categoriesData.pagination.totalItems}
-                    </strong>{' '}
-                    displayed records ·{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {categoriesData.summaryTotalLabel}
-                    </strong>
-                  </>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage <= 1}
-                  onClick={() => fetchCategories(currentPage - 1)}
-                  leftIcon={isRtl ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
-                >
-                  {isRtl ? 'السابق' : 'Previous'}
-                </Button>
-                <span className="px-2.5 py-1 font-mono text-xs text-awn-text-primary tabular-nums">
-                  {isRtl
-                    ? `صفحة ${formatNumber(currentPage)} من ${formatNumber(categoriesData.pagination.totalPages)}`
-                    : `Page ${currentPage} of ${categoriesData.pagination.totalPages}`}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= categoriesData.pagination.totalPages}
-                  onClick={() => fetchCategories(currentPage + 1)}
-                  rightIcon={isRtl ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                >
-                  {isRtl ? 'التالي' : 'Next'}
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      {/* Main Asset Categories Table */}
+      <DataTable
+        title={isRtl ? 'تصنيفات الأصول' : 'Asset Categories'}
+        columns={columns}
+        data={categoriesData.items}
+        count={categoriesData.pagination.totalItems}
+        loading={loading}
+        pageIndex={currentPage - 1}
+        pageSize={pageSize}
+        onPageChange={(newPageIndex) => {
+          const next = newPageIndex + 1;
+          setCurrentPage(next);
+          fetchCategories(next);
+        }}
+        searchValue={searchQuery}
+        onSearchChange={(value) => {
+          setSearchQuery(value);
+          setCurrentPage(1);
+        }}
+        searchPlaceholder={
+          isRtl
+            ? 'البحث برمز التصنيف، الاسم، الوصف...'
+            : 'Search by Category ID, Category Name, Description...'
+        }
+        onAddNew={handleOpenCreateModal}
+        onExport={handleExportCsv}
+      />
 
       {/* ========================================================================
           CATEGORY DETAILS DRAWER (Section 5)

@@ -53,9 +53,13 @@ export type DataTableProps<TData extends RowData = RowData> = {
   onSearchChange?: (value: string) => void;
 
   onAddNew?: () => void;
+  addNewLabel?: string;
   onExport?: () => void;
+  exportLabel?: string;
 
   title: string;
+  subtitle?: string;
+  toolbarSlot?: React.ReactNode;
 };
 
 /**
@@ -101,8 +105,12 @@ export function DataTable<TData extends RowData = RowData>({
   searchValue = '',
   onSearchChange,
   onAddNew,
+  addNewLabel,
   onExport,
+  exportLabel,
   title,
+  subtitle,
+  toolbarSlot,
 }: DataTableProps<TData>) {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.dir() === 'rtl' || i18n.language === 'ar';
@@ -156,33 +164,37 @@ export function DataTable<TData extends RowData = RowData>({
             <h2 className="text-base font-semibold text-awn-text-primary tracking-tight">
               {title}
             </h2>
-            <p className="text-xs text-awn-text-secondary mt-0.5 tabular-nums">
-              {isRtl ? (
-                <>
-                  {t('common.showing', { defaultValue: 'عرض' })}{' '}
-                  <span className="font-semibold text-awn-text-primary">
-                    {formatLocalizedNumber(data.length)}
-                  </span>{' '}
-                  {t('common.of', { defaultValue: 'من' })}{' '}
-                  <span className="font-semibold text-awn-text-primary">
-                    {formatLocalizedNumber(count)}
-                  </span>{' '}
-                  {t('common.records', { defaultValue: 'سجل' })}
-                </>
-              ) : (
-                <>
-                  {t('common.showing', { defaultValue: 'Showing' })}{' '}
-                  <span className="font-semibold text-awn-text-primary">
-                    {formatLocalizedNumber(data.length)}
-                  </span>{' '}
-                  {t('common.of', { defaultValue: 'of' })}{' '}
-                  <span className="font-semibold text-awn-text-primary">
-                    {formatLocalizedNumber(count)}
-                  </span>{' '}
-                  {t('common.records', { defaultValue: 'records' })}
-                </>
-              )}
-            </p>
+            {subtitle ? (
+              <p className="text-xs text-awn-text-secondary mt-0.5">{subtitle}</p>
+            ) : (
+              <p className="text-xs text-awn-text-secondary mt-0.5 tabular-nums">
+                {isRtl ? (
+                  <>
+                    {t('common.showing', { defaultValue: 'عرض' })}{' '}
+                    <span className="font-semibold text-awn-text-primary">
+                      {formatLocalizedNumber(data.length)}
+                    </span>{' '}
+                    {t('common.of', { defaultValue: 'من' })}{' '}
+                    <span className="font-semibold text-awn-text-primary">
+                      {formatLocalizedNumber(count)}
+                    </span>{' '}
+                    {t('common.records', { defaultValue: 'سجل' })}
+                  </>
+                ) : (
+                  <>
+                    {t('common.showing', { defaultValue: 'Showing' })}{' '}
+                    <span className="font-semibold text-awn-text-primary">
+                      {formatLocalizedNumber(data.length)}
+                    </span>{' '}
+                    {t('common.of', { defaultValue: 'of' })}{' '}
+                    <span className="font-semibold text-awn-text-primary">
+                      {formatLocalizedNumber(count)}
+                    </span>{' '}
+                    {t('common.records', { defaultValue: 'records' })}
+                  </>
+                )}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -204,15 +216,18 @@ export function DataTable<TData extends RowData = RowData>({
             )}
 
             <div className="flex items-center gap-2">
+              {toolbarSlot}
               {onExport && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={onExport}
                   leftIcon={<Download className="w-3.5 h-3.5" />}
-                  ariaLabel={t('common.exportCsv', { defaultValue: 'Export CSV' })}
+                  ariaLabel={
+                    exportLabel || t('common.exportCsv', { defaultValue: 'Export CSV' })
+                  }
                 >
-                  {t('common.exportCsv', { defaultValue: 'Export CSV' })}
+                  {exportLabel || t('common.exportCsv', { defaultValue: 'Export CSV' })}
                 </Button>
               )}
               {onAddNew && (
@@ -221,9 +236,9 @@ export function DataTable<TData extends RowData = RowData>({
                   size="sm"
                   onClick={onAddNew}
                   leftIcon={<Plus className="w-3.5 h-3.5" />}
-                  ariaLabel={t('common.new', { defaultValue: 'Add New' })}
+                  ariaLabel={addNewLabel || t('common.new', { defaultValue: 'Add New' })}
                 >
-                  {t('common.new', { defaultValue: 'Add New' })}
+                  {addNewLabel || t('common.new', { defaultValue: 'Add New' })}
                 </Button>
               )}
             </div>

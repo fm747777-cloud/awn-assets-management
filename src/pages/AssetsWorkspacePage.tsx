@@ -1,10 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
   Ban,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Eye,
   Package,
@@ -26,8 +24,8 @@ import { StatusBadge } from '../components/ui/StatusBadge.tsx';
 import { Drawer } from '../components/ui/Drawer.tsx';
 import { ConfirmDialog, Modal } from '../components/ui/Modal.tsx';
 import { FormSection } from '../components/ui/FormSection.tsx';
-import { EmptyState } from '../components/ui/EmptyState.tsx';
-import { TableSkeleton } from '../components/ui/LoadingState.tsx';
+import { DataTable, dataTableFeatures } from '../components/table/DataTable.tsx';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useLanguage } from '../hooks/useLanguage.tsx';
 import type {
   Asset,
@@ -96,6 +94,7 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
     pagination: { page: 1, pageSize: 8, totalItems: 0, totalPages: 1 },
   });
   const [loading, setLoading] = useState(true);
+  const pageSize = 8;
 
   // Integrated Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -389,6 +388,194 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
     categoryFilter !== 'ALL' ||
     statusFilter !== 'ALL';
 
+  const columns = useMemo<ColumnDef<typeof dataTableFeatures, Asset>[]>(
+    () => [
+      {
+        id: 'code',
+        accessorKey: 'code',
+        header: () => (isRtl ? 'رمز الأصل' : 'Asset ID'),
+        cell: ({ row }) => {
+          const asset = row.original;
+          return (
+            <div>
+              <button
+                type="button"
+                onClick={() => handleOpenView(asset)}
+                className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
+              >
+                {asset.code}
+              </button>
+              <div className="text-[11px] text-awn-text-muted mt-0.5">
+                {asset.classification}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        id: 'name',
+        accessorKey: 'name',
+        header: () => (isRtl ? 'الأصل والرقم التسلسلي' : 'Asset & Serial / License'),
+        cell: ({ row }) => {
+          const asset = row.original;
+          return (
+            <div>
+              <button
+                type="button"
+                onClick={() => handleOpenView(asset)}
+                className="font-medium text-awn-text-primary hover:text-awn-primary text-left rtl:text-right leading-snug cursor-pointer"
+              >
+                {asset.name}
+              </button>
+              <div className="text-xs text-awn-text-muted mt-0.5 font-mono tabular-nums">
+                {asset.serialNumber}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        id: 'category',
+        accessorKey: 'category',
+        header: () => (isRtl ? 'التصنيف والنوع' : 'Category & Type'),
+        cell: ({ row }) => {
+          const asset = row.original;
+          return (
+            <div>
+              <div className="text-xs font-medium text-awn-text-primary">
+                {asset.category}
+              </div>
+              <div className="text-xs text-awn-text-secondary mt-0.5">
+                {asset.type}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: () => (isRtl ? 'حالة الأصل' : 'Status'),
+        cell: ({ row }) => {
+          const asset = row.original;
+          return <StatusBadge label={asset.status} tone={asset.statusTone} />;
+        },
+      },
+      {
+        id: 'assignedTo',
+        accessorKey: 'assignedTo',
+        header: () => (isRtl ? 'المسند إليه والموقع' : 'Assigned To & Location'),
+        cell: ({ row }) => {
+          const asset = row.original;
+          return asset.assignedTo ? (
+            <div>
+              <div className="text-xs font-medium text-awn-text-primary">
+                {asset.assignedTo}
+              </div>
+              <div className="text-xs text-awn-text-secondary mt-0.5">
+                {asset.department} · {asset.location}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="text-xs font-medium text-awn-text-muted">
+                {isRtl ? 'غير مسند (بالمستودع)' : 'Unassigned'}
+              </div>
+              <div className="text-xs text-awn-text-secondary mt-0.5">
+                {asset.location}
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        id: 'actions',
+        header: () => (
+          <div className="text-right rtl:text-left">{isRtl ? 'الإجراءات' : 'Actions'}</div>
+        ),
+        cell: ({ row }) => {
+          const asset = row.original;
+          const isRetired = asset.status === 'Retired';
+          return (
+            <div className="inline-flex items-center justify-end gap-1">
+              <button
+                type="button"
+                onClick={() => handleOpenView(asset)}
+                title={isRtl ? 'عرض تفاصيل الأصل' : 'View asset details'}
+                aria-label={isRtl ? `عرض ${asset.name}` : `View ${asset.name}`}
+                className="px-2 py-1 rounded text-xs font-medium text-awn-text-secondary hover:text-awn-primary hover:bg-awn-surface border border-transparent hover:border-awn-border inline-flex items-center gap-1 cursor-pointer"
+              >
+                <Eye className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>{isRtl ? 'عرض' : 'View'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOpenEdit(asset)}
+                title={isRtl ? 'تعديل بيانات الأصل' : 'Edit asset'}
+                aria-label={isRtl ? `تعديل ${asset.name}` : `Edit ${asset.name}`}
+                className="px-2 py-1 rounded text-xs font-medium text-awn-text-secondary hover:text-awn-primary hover:bg-awn-surface border border-transparent hover:border-awn-border inline-flex items-center gap-1 cursor-pointer"
+              >
+                <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>{isRtl ? 'تعديل' : 'Edit'}</span>
+              </button>
+
+              {!isRetired && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenReassign(asset)}
+                  title={
+                    asset.assignedTo
+                      ? isRtl
+                        ? 'نقل العهدة إلى موظف آخر'
+                        : 'Reassign asset to another employee'
+                      : isRtl
+                      ? 'إسناد العهدة إلى موظف'
+                      : 'Assign asset to an employee'
+                  }
+                  aria-label={
+                    asset.assignedTo
+                      ? isRtl
+                        ? `نقل عهدة ${asset.name}`
+                        : `Reassign ${asset.name}`
+                      : isRtl
+                      ? `إسناد ${asset.name}`
+                      : `Assign ${asset.name}`
+                  }
+                  className="px-2 py-1 rounded text-xs font-medium text-awn-text-secondary hover:text-awn-primary hover:bg-awn-surface border border-transparent hover:border-awn-border inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <UserPlus className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>
+                    {isRtl
+                      ? asset.assignedTo
+                        ? 'نقل العهدة'
+                        : 'إسناد'
+                      : asset.assignedTo
+                      ? 'Reassign'
+                      : 'Assign'}
+                  </span>
+                </button>
+              )}
+
+              {!isRetired && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenRetire(asset)}
+                  title={isRtl ? 'إحالة الأصل للتقاعد / الاستبعاد' : 'Retire / Deactivate asset'}
+                  aria-label={isRtl ? `استبعاد ${asset.name}` : `Retire ${asset.name}`}
+                  className="p-1.5 rounded text-awn-text-muted hover:text-awn-error hover:bg-awn-error-soft border border-transparent cursor-pointer"
+                >
+                  <Ban className="w-3.5 h-3.5" aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          );
+        },
+      },
+    ],
+    [isRtl]
+  );
+
   return (
     <div className="space-y-5">
       {/* Page Header with exact Title, Description, and Required Actions */}
@@ -477,523 +664,143 @@ export default function AssetsWorkspacePage({ onNavigate }: AssetsWorkspacePageP
         }
       />
 
-      {/* Main Assets Table Workspace */}
-      <div className="bg-awn-surface border border-awn-border rounded-lg overflow-hidden">
-        {/* Integrated Workspace Toolbar: Search, Classification, Category & Status Filters */}
-        <div className="p-4 border-b border-awn-border space-y-3.5">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-            {/* Search Bar integrated into toolbar */}
-            <div className="flex flex-1 flex-wrap items-center gap-2.5">
-              <div className="w-full sm:w-80">
-                <Input
-                  placeholder={
-                    isRtl
-                      ? 'البحث برمز الأصل، الاسم، الرقم التسلسلي، الموظف...'
-                      : 'Search by asset ID, name, serial, employee, location...'
-                  }
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  onClear={() => {
-                    setSearchQuery('');
-                    setCurrentPage(1);
-                  }}
-                  leftIcon={<Search className="w-4 h-4" />}
-                  aria-label={isRtl ? 'بحث في الأصول' : 'Search assets'}
-                />
-              </div>
-
-              {/* Category Select Filter */}
-              <div className="w-full sm:w-44">
-                <Select
-                  aria-label={isRtl ? 'تصفية حسب التصنيف' : 'Filter by asset category'}
-                  placeholder=""
-                  value={categoryFilter}
-                  onChange={(e) => {
-                    setCategoryFilter(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  options={[
-                    { value: 'ALL', label: isRtl ? 'كافة التصنيفات' : 'All Categories' },
-                    { value: 'Devices', label: isRtl ? 'الأجهزة والعتاد' : 'Devices' },
-                    { value: 'Licenses', label: isRtl ? 'التراخيص والبرمجيات' : 'Licenses' },
-                    { value: 'Equipment', label: isRtl ? 'الآلات والمعدات' : 'Equipment' },
-                  ]}
-                />
-              </div>
-
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={handleResetFilters}>
-                  {isRtl ? 'إعادة ضبط التصفية' : 'Clear Filters'}
-                </Button>
-              )}
-            </div>
-
-            {/* Classification Segmented Control + Demo Reset */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div
-                role="group"
-                aria-label={isRtl ? 'تصفية الأصول حسب نوع الرقابة' : 'Filter by asset classification'}
-                className="inline-flex items-center p-0.5 rounded-md bg-awn-surface-alt border border-awn-border"
-              >
-                {classificationTabs.map((tab) => {
-                  const active = classificationFilter === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => {
-                        setClassificationFilter(tab.id);
-                        setCurrentPage(1);
-                      }}
-                      className={`px-2.5 py-1 text-xs font-medium rounded transition-colors whitespace-nowrap cursor-pointer ${
-                        active
-                          ? 'bg-awn-surface text-awn-primary font-semibold border border-awn-border'
-                          : 'text-awn-text-secondary hover:text-awn-text-primary border border-transparent'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
-                onClick={async () => {
-                  await assetModuleService.resetWorkspaceData('assets-group');
-                  handleResetFilters();
-                  await fetchAssets(1);
-                  showToast({
-                    title: isRtl ? 'تم استرجاع البيانات التجريبية' : 'Demo data restored',
-                    description: isRtl
-                      ? 'تمت إعادة ضبط سجل الأصول إلى حالته الافتراضية.'
-                      : 'Assets registry reset to initial state.',
-                    variant: 'info',
-                  });
+      {/* Classification & Status Filter Strips */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-awn-surface border border-awn-border rounded-lg p-2.5">
+        <div
+          role="group"
+          aria-label={isRtl ? 'تصفية الأصول حسب نوع الرقابة' : 'Filter by asset classification'}
+          className="inline-flex items-center p-0.5 rounded-md bg-awn-surface-alt border border-awn-border"
+        >
+          {classificationTabs.map((tab) => {
+            const active = classificationFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setClassificationFilter(tab.id);
+                  setCurrentPage(1);
                 }}
-                title={isRtl ? 'إعادة تعيين الحالة' : 'Reset demo state'}
+                className={`px-2.5 py-1 text-xs font-medium rounded transition-colors whitespace-nowrap cursor-pointer ${
+                  active
+                    ? 'bg-awn-surface text-awn-primary font-semibold border border-awn-border'
+                    : 'text-awn-text-secondary hover:text-awn-text-primary border border-transparent'
+                }`}
               >
-                {isRtl ? 'إعادة ضبط' : 'Reset'}
-              </Button>
-            </div>
-          </div>
-
-          {/* Secondary Toolbar Row: Status Filter & Record Count */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-            <div
-              role="group"
-              aria-label={isRtl ? 'تصفية الأصول حسب الحالة التشغيلية' : 'Filter by asset status'}
-              className="inline-flex flex-wrap items-center gap-1 p-1 rounded-md bg-awn-surface-alt border border-awn-border"
-            >
-              {statusTabs.map((tab) => {
-                const active = statusFilter === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => {
-                      setStatusFilter(tab.id);
-                      setCurrentPage(1);
-                    }}
-                    className={`px-2.5 py-1 text-xs font-medium rounded transition-colors whitespace-nowrap cursor-pointer ${
-                      active
-                        ? 'bg-awn-surface text-awn-primary font-semibold border border-awn-border'
-                        : 'text-awn-text-secondary hover:text-awn-text-primary border border-transparent'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="text-xs text-awn-text-muted tabular-nums">
-              {isRtl ? (
-                <>
-                  عرض{' '}
-                  <span className="font-semibold text-awn-text-primary">
-                    {formatNumber(assetsData.items.length)}
-                  </span>{' '}
-                  من أصل{' '}
-                  <span className="font-semibold text-awn-text-primary">
-                    {formatNumber(assetsData.pagination.totalItems)}
-                  </span>{' '}
-                  أصل
-                </>
-              ) : (
-                <>
-                  Showing{' '}
-                  <span className="font-semibold text-awn-text-primary">
-                    {assetsData.items.length}
-                  </span>{' '}
-                  of{' '}
-                  <span className="font-semibold text-awn-text-primary">
-                    {assetsData.pagination.totalItems}
-                  </span>{' '}
-                  assets
-                </>
-              )}
-            </div>
-          </div>
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Table Body / States */}
-        {loading ? (
-          <TableSkeleton rows={6} columns={6} />
-        ) : assetsData.items.length === 0 ? (
-          <EmptyState
-            title={isRtl ? 'لم يتم العثور على أصول مطابقة' : 'No matching assets found'}
-            description={
-              hasActiveFilters
-                ? isRtl
-                  ? 'لا توجد أصول تطابق معايير البحث أو خيارات التصفية المحددة حالياً.'
-                  : 'No company assets match your current search query or selected filters.'
-                : isRtl
-                ? 'لا توجد أصول مسجلة حالياً في مساحة العمل.'
-                : 'No assets are currently registered in the workspace.'
-            }
-            secondaryActionLabel={
-              hasActiveFilters ? (isRtl ? 'إعادة ضبط التصفية' : 'Reset All Filters') : null
-            }
-            onSecondaryAction={hasActiveFilters ? handleResetFilters : null}
-            primaryActionLabel={isRtl ? 'إضافة أصل' : 'New Asset'}
-            onPrimaryAction={() => setNewAssetModalOpen(true)}
-          />
-        ) : (
-          <>
-            {/* Desktop High-Density Enterprise Table */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left rtl:text-right border-collapse">
-                <thead>
-                  <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'رمز الأصل' : 'Asset ID'}
-                    </th>
-                    <th className="py-3 px-4">
-                      {isRtl ? 'الأصل والرقم التسلسلي' : 'Asset & Serial / License'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'التصنيف والنوع' : 'Category & Type'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'حالة الأصل' : 'Status'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'المسند إليه والموقع' : 'Assigned To & Location'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
-                      {isRtl ? 'الإجراءات' : 'Actions'}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-awn-border text-sm">
-                  {assetsData.items.map((asset) => {
-                    const isRetired = asset.status === 'Retired';
-                    return (
-                      <tr
-                        key={asset.id}
-                        className="hover:bg-awn-surface-alt transition-colors duration-100"
-                      >
-                        {/* Asset ID */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenView(asset)}
-                            className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
-                          >
-                            {asset.code}
-                          </button>
-                          <div className="text-[11px] text-awn-text-muted mt-0.5">
-                            {asset.classification}
-                          </div>
-                        </td>
-
-                        {/* Asset Name & Serial */}
-                        <td className="py-3.5 px-4 align-middle">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenView(asset)}
-                            className="font-medium text-awn-text-primary hover:text-awn-primary text-left leading-snug cursor-pointer"
-                          >
-                            {asset.name}
-                          </button>
-                          <div className="text-xs text-awn-text-muted mt-0.5 font-mono tabular-nums">
-                            {asset.serialNumber}
-                          </div>
-                        </td>
-
-                        {/* Category & Type */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <div className="text-xs font-medium text-awn-text-primary">
-                            {asset.category}
-                          </div>
-                          <div className="text-xs text-awn-text-secondary mt-0.5">
-                            {asset.type}
-                          </div>
-                        </td>
-
-                        {/* Status */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <StatusBadge label={asset.status} tone={asset.statusTone} />
-                        </td>
-
-                        {/* Assigned Information */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          {asset.assignedTo ? (
-                            <div>
-                              <div className="text-xs font-medium text-awn-text-primary">
-                                {asset.assignedTo}
-                              </div>
-                              <div className="text-xs text-awn-text-secondary mt-0.5">
-                                {asset.department} · {asset.location}
-                              </div>
-                            </div>
-                          ) : (
-                            <div>
-                              <div className="text-xs font-medium text-awn-text-muted">
-                                {isRtl ? 'غير مسند (بالمستودع)' : 'Unassigned'}
-                              </div>
-                              <div className="text-xs text-awn-text-secondary mt-0.5">
-                                {asset.location}
-                              </div>
-                            </div>
-                          )}
-                        </td>
-
-                        {/* Discoverable Row Actions */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right rtl:text-left">
-                          <div className="inline-flex items-center justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenView(asset)}
-                              title={isRtl ? 'عرض تفاصيل الأصل' : 'View asset details'}
-                              aria-label={isRtl ? `عرض ${asset.name}` : `View ${asset.name}`}
-                              className="px-2 py-1 rounded text-xs font-medium text-awn-text-secondary hover:text-awn-primary hover:bg-awn-surface border border-transparent hover:border-awn-border inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Eye className="w-3.5 h-3.5" aria-hidden="true" />
-                              <span>{isRtl ? 'عرض' : 'View'}</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEdit(asset)}
-                              title={isRtl ? 'تعديل بيانات الأصل' : 'Edit asset'}
-                              aria-label={isRtl ? `تعديل ${asset.name}` : `Edit ${asset.name}`}
-                              className="px-2 py-1 rounded text-xs font-medium text-awn-text-secondary hover:text-awn-primary hover:bg-awn-surface border border-transparent hover:border-awn-border inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
-                              <span>{isRtl ? 'تعديل' : 'Edit'}</span>
-                            </button>
-
-                            {!isRetired && (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenReassign(asset)}
-                                title={
-                                  asset.assignedTo
-                                    ? isRtl
-                                      ? 'نقل العهدة إلى موظف آخر'
-                                      : 'Reassign asset to another employee'
-                                    : isRtl
-                                    ? 'إسناد العهدة إلى موظف'
-                                    : 'Assign asset to an employee'
-                                }
-                                aria-label={
-                                  asset.assignedTo
-                                    ? isRtl
-                                      ? `نقل عهدة ${asset.name}`
-                                      : `Reassign ${asset.name}`
-                                    : isRtl
-                                    ? `إسناد ${asset.name}`
-                                    : `Assign ${asset.name}`
-                                }
-                                className="px-2 py-1 rounded text-xs font-medium text-awn-text-secondary hover:text-awn-primary hover:bg-awn-surface border border-transparent hover:border-awn-border inline-flex items-center gap-1 cursor-pointer"
-                              >
-                                <UserPlus className="w-3.5 h-3.5" aria-hidden="true" />
-                                <span>
-                                  {isRtl
-                                    ? asset.assignedTo
-                                      ? 'نقل العهدة'
-                                      : 'إسناد'
-                                    : asset.assignedTo
-                                    ? 'Reassign'
-                                    : 'Assign'}
-                                </span>
-                              </button>
-                            )}
-
-                            {!isRetired && (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenRetire(asset)}
-                                title={isRtl ? 'إحالة الأصل للتقاعد / الاستبعاد' : 'Retire / Deactivate asset'}
-                                aria-label={isRtl ? `استبعاد ${asset.name}` : `Retire ${asset.name}`}
-                                className="p-1.5 rounded text-awn-text-muted hover:text-awn-error hover:bg-awn-error-soft border border-transparent cursor-pointer"
-                              >
-                                <Ban className="w-3.5 h-3.5" aria-hidden="true" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Responsive Mobile Card Representation */}
-            <div className="md:hidden divide-y divide-awn-border">
-              {assetsData.items.map((asset) => {
-                const isRetired = asset.status === 'Retired';
-                return (
-                  <div key={asset.id} className="p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenView(asset)}
-                          className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
-                        >
-                          {asset.code}
-                        </button>
-                        <h3 className="text-sm font-semibold text-awn-text-primary mt-0.5">
-                          {asset.name}
-                        </h3>
-                        <p className="text-xs text-awn-text-muted font-mono tabular-nums">
-                          {asset.serialNumber} · {asset.classification}
-                        </p>
-                      </div>
-                      <StatusBadge label={asset.status} tone={asset.statusTone} />
-                    </div>
-
-                    <div className="text-xs text-awn-text-secondary space-y-1">
-                      <div>
-                        <span className="text-awn-text-muted">{isRtl ? 'التصنيف: ' : 'Category: '}</span>
-                        <span className="text-awn-text-primary font-medium">
-                          {asset.category}
-                        </span>
-                        <span> · {asset.type}</span>
-                      </div>
-                      <div>
-                        <span className="text-awn-text-muted">{isRtl ? 'المسند إليه: ' : 'Assigned To: '}</span>
-                        <span className="text-awn-text-primary font-medium">
-                          {asset.assignedTo || (isRtl ? 'غير مسند (بالمستودع)' : 'Unassigned')}
-                        </span>
-                        <span> · {asset.location}</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-1 flex flex-wrap items-center justify-end gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        leftIcon={<Eye className="w-3.5 h-3.5" />}
-                        onClick={() => handleOpenView(asset)}
-                      >
-                        {isRtl ? 'عرض' : 'View'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        leftIcon={<Pencil className="w-3.5 h-3.5" />}
-                        onClick={() => handleOpenEdit(asset)}
-                      >
-                        {isRtl ? 'تعديل' : 'Edit'}
-                      </Button>
-                      {!isRetired && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          leftIcon={<UserPlus className="w-3.5 h-3.5" />}
-                          onClick={() => handleOpenReassign(asset)}
-                        >
-                          {isRtl
-                            ? asset.assignedTo
-                              ? 'نقل العهدة'
-                              : 'إسناد'
-                            : asset.assignedTo
-                            ? 'Reassign'
-                            : 'Assign'}
-                        </Button>
-                      )}
-                      {!isRetired && (
-                        <Button
-                          variant="dangerOutline"
-                          size="sm"
-                          leftIcon={<Ban className="w-3.5 h-3.5" />}
-                          onClick={() => handleOpenRetire(asset)}
-                        >
-                          {isRtl ? 'استبعاد' : 'Retire'}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* Table Pagination Footer */}
-        <div className="px-4 py-3 bg-awn-surface-alt border-t border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-awn-text-secondary">
-          <div className="tabular-nums">
-            {isRtl ? (
-              <>
-                صفحة{' '}
-                <span className="font-semibold text-awn-text-primary">
-                  {formatNumber(assetsData.pagination.page)}
-                </span>{' '}
-                من{' '}
-                <span className="font-semibold text-awn-text-primary">
-                  {formatNumber(assetsData.pagination.totalPages)}
-                </span>
-              </>
-            ) : (
-              <>
-                Page{' '}
-                <span className="font-semibold text-awn-text-primary">
-                  {assetsData.pagination.page}
-                </span>{' '}
-                of{' '}
-                <span className="font-semibold text-awn-text-primary">
-                  {assetsData.pagination.totalPages}
-                </span>
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={assetsData.pagination.page <= 1 || loading}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              leftIcon={isRtl ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
-            >
-              {isRtl ? 'السابق' : 'Previous'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={
-                assetsData.pagination.page >= assetsData.pagination.totalPages || loading
-              }
-              onClick={() =>
-                setCurrentPage((p) => Math.min(assetsData.pagination.totalPages, p + 1))
-              }
-              rightIcon={isRtl ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            >
-              {isRtl ? 'التالي' : 'Next'}
-            </Button>
-          </div>
+        <div
+          role="group"
+          aria-label={isRtl ? 'تصفية الأصول حسب الحالة التشغيلية' : 'Filter by asset status'}
+          className="inline-flex flex-wrap items-center gap-1 p-0.5 rounded-md bg-awn-surface-alt border border-awn-border"
+        >
+          {statusTabs.map((tab) => {
+            const active = statusFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setStatusFilter(tab.id);
+                  setCurrentPage(1);
+                }}
+                className={`px-2.5 py-1 text-xs font-medium rounded transition-colors whitespace-nowrap cursor-pointer ${
+                  active
+                    ? 'bg-awn-surface text-awn-primary font-semibold border border-awn-border'
+                    : 'text-awn-text-secondary hover:text-awn-text-primary border border-transparent'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
+
+      {/* Main Assets DataTable */}
+      <DataTable
+        title={isRtl ? 'سجل الأصول' : 'Assets Registry'}
+        subtitle={
+          isRtl
+            ? 'إدارة دورة حياة الأصول، العهد، حالات الفحص والامتثال.'
+            : 'Track enterprise asset lifecycle, custodians, maintenance, and compliance.'
+        }
+        columns={columns}
+        data={assetsData.items}
+        count={assetsData.pagination.totalItems}
+        loading={loading}
+        pageIndex={currentPage - 1}
+        pageSize={pageSize}
+        onPageChange={(newPageIndex) => {
+          const next = newPageIndex + 1;
+          setCurrentPage(next);
+          fetchAssets(next);
+        }}
+        searchValue={searchQuery}
+        onSearchChange={(value) => {
+          setSearchQuery(value);
+          setCurrentPage(1);
+        }}
+        searchPlaceholder={
+          isRtl
+            ? 'البحث برمز الأصل، الاسم، الرقم التسلسلي، الموظف...'
+            : 'Search by asset ID, name, serial, employee, location...'
+        }
+        onAddNew={() => setNewAssetModalOpen(true)}
+        addNewLabel={isRtl ? 'إضافة أصل' : 'New Asset'}
+        onExport={handleExportCsv}
+        exportLabel={isRtl ? 'تصدير CSV' : 'Export CSV'}
+        toolbarSlot={
+          <div className="flex items-center gap-2">
+            <div className="w-36">
+              <Select
+                aria-label={isRtl ? 'تصفية حسب التصنيف' : 'Filter by asset category'}
+                placeholder=""
+                value={categoryFilter}
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: 'ALL', label: isRtl ? 'كافة التصنيفات' : 'All Categories' },
+                  { value: 'Devices', label: isRtl ? 'الأجهزة والعتاد' : 'Devices' },
+                  { value: 'Licenses', label: isRtl ? 'التراخيص والبرمجيات' : 'Licenses' },
+                  { value: 'Equipment', label: isRtl ? 'الآلات والمعدات' : 'Equipment' },
+                ]}
+              />
+            </div>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={handleResetFilters}>
+                {isRtl ? 'مسح التصفية' : 'Clear'}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+              onClick={async () => {
+                await assetModuleService.resetWorkspaceData('assets-group');
+                handleResetFilters();
+                await fetchAssets(1);
+                showToast({
+                  title: isRtl ? 'تم استرجاع البيانات التجريبية' : 'Demo data restored',
+                  description: isRtl
+                    ? 'تمت إعادة ضبط سجل الأصول إلى حالته الافتراضية.'
+                    : 'Assets registry reset to initial state.',
+                  variant: 'info',
+                });
+              }}
+              title={isRtl ? 'إعادة تعيين الحالة' : 'Reset demo state'}
+            >
+              {isRtl ? 'إعادة ضبط' : 'Reset'}
+            </Button>
+          </div>
+        }
+      />
 
       {/* ========================================================================
           NEW ASSET SELECTION MODAL (Lightweight Choice: Compliance vs Non-Compliance)

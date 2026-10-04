@@ -1,14 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Ban,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Eye,
   Layers,
   Pencil,
   Plus,
-  Search,
   Trash2,
 } from 'lucide-react';
 import { assetModuleService } from '../services/assetModuleService.ts';
@@ -21,8 +18,8 @@ import { StatusBadge } from '../components/ui/StatusBadge.tsx';
 import { Drawer } from '../components/ui/Drawer.tsx';
 import { ConfirmDialog, Modal } from '../components/ui/Modal.tsx';
 import { FormSection } from '../components/ui/FormSection.tsx';
-import { EmptyState } from '../components/ui/EmptyState.tsx';
-import { TableSkeleton } from '../components/ui/LoadingState.tsx';
+import { DataTable, dataTableFeatures } from '../components/table/DataTable.tsx';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useLanguage } from '../hooks/useLanguage.tsx';
 import type {
   AssetType,
@@ -309,6 +306,132 @@ export default function AssetTypesPage() {
     ...categoryOptions,
   ];
 
+  const columns = useMemo<ColumnDef<typeof dataTableFeatures, AssetType>[]>(
+    () => [
+      {
+        id: 'typeId',
+        accessorKey: 'typeId',
+        header: () => (isRtl ? 'رمز النوع' : 'Type ID'),
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={() => handleOpenTypeDetails(row.original)}
+            className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
+          >
+            {row.original.typeId}
+          </button>
+        ),
+      },
+      {
+        id: 'typeName',
+        accessorKey: 'typeName',
+        header: () => (isRtl ? 'اسم النوع' : 'Type Name'),
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={() => handleOpenTypeDetails(row.original)}
+            className="font-medium text-awn-text-primary hover:text-awn-primary text-left rtl:text-right transition-colors cursor-pointer"
+          >
+            {row.original.typeName}
+          </button>
+        ),
+      },
+      {
+        id: 'category',
+        accessorKey: 'category',
+        header: () => (isRtl ? 'التصنيف' : 'Category'),
+        cell: ({ row }) => (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-awn-surface-alt border border-awn-border text-awn-text-primary">
+            {row.original.category}
+          </span>
+        ),
+      },
+      {
+        id: 'description',
+        accessorKey: 'description',
+        header: () => (isRtl ? 'الوصف' : 'Description'),
+        cell: ({ row }) => (
+          <span className="text-xs text-awn-text-secondary max-w-md truncate block">
+            {row.original.description || '—'}
+          </span>
+        ),
+      },
+      {
+        id: 'createdDate',
+        accessorKey: 'createdDate',
+        header: () => (isRtl ? 'تاريخ الإنشاء' : 'Created Date'),
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-awn-text-secondary tabular-nums">
+            {row.original.createdDate}
+          </span>
+        ),
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: () => (isRtl ? 'الحالة' : 'Status'),
+        cell: ({ row }) => (
+          <StatusBadge label={row.original.status} tone={row.original.statusTone} />
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => (
+          <span className="block text-right rtl:text-left">
+            {isRtl ? 'الإجراءات' : 'Actions'}
+          </span>
+        ),
+        cell: ({ row }) => {
+          const assetType = row.original;
+          const isActive = assetType.status === 'Active';
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <button
+                type="button"
+                onClick={() => handleOpenTypeDetails(assetType)}
+                title={`View ${assetType.typeName}`}
+                aria-label={`View ${assetType.typeName}`}
+                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenEditModal(assetType)}
+                title={`Edit ${assetType.typeName}`}
+                aria-label={`Edit ${assetType.typeName}`}
+                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              {isActive && (
+                <button
+                  type="button"
+                  onClick={() => setDeactivateTarget(assetType)}
+                  title={`Deactivate ${assetType.typeName}`}
+                  aria-label={`Deactivate ${assetType.typeName}`}
+                  className="p-1.5 rounded text-awn-text-secondary hover:text-awn-warning hover:bg-awn-warning-soft transition-colors cursor-pointer"
+                >
+                  <Ban className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(assetType)}
+                title={`Delete ${assetType.typeName}`}
+                aria-label={`Delete ${assetType.typeName}`}
+                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-error hover:bg-awn-error-soft transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        },
+      },
+    ],
+    [isRtl]
+  );
+
   return (
     <div className="space-y-5">
       {/* Page Header with exact Title, Description, and Actions ("Export CSV", "New Type") */}
@@ -367,256 +490,33 @@ export default function AssetTypesPage() {
         }
       />
 
-      {/* Main Asset Types Table Container */}
-      <div className="bg-awn-surface border border-awn-border rounded-lg overflow-hidden">
-        {/* Search & Summary Toolbar */}
-        <div className="p-4 border-b border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="w-full sm:w-80">
-            <Input
-              placeholder={
-                isRtl
-                  ? 'البحث برمز النوع، الاسم، التصنيف، الوصف...'
-                  : 'Search by Type ID, Type Name, Category, Description...'
-              }
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onClear={() => setSearchQuery('')}
-              leftIcon={<Search className="w-4 h-4" />}
-              aria-label={isRtl ? 'بحث في أنواع الأصول' : 'Search asset types'}
-            />
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-awn-text-secondary">
-            <span className="px-2.5 py-1 rounded-md bg-awn-surface-alt border border-awn-border font-semibold text-awn-text-primary tabular-nums">
-              {isRtl
-                ? `${formatNumber(typesData.totalRecordsCount)} نوع أصل`
-                : typesData.summaryTotalLabel}
-            </span>
-          </div>
-        </div>
-
-        {/* Table Content */}
-        {loading ? (
-          <TableSkeleton rows={5} columns={6} />
-        ) : typesData.items.length === 0 ? (
-          <EmptyState
-            title={isRtl ? 'لم يتم العثور على أنواع أصول' : 'No Asset Types Found'}
-            description={
-              searchQuery
-                ? isRtl
-                  ? `لا توجد أنواع أصول تطابق "${searchQuery}". جرب إفراغ خانة البحث.`
-                  : `No asset types matched "${searchQuery}". Try clearing your search query.`
-                : isRtl
-                ? 'لا توجد أنواع أصول مسجلة حالياً. انقر على "إضافة نوع" لإنشاء أول نوع أصل.'
-                : 'No asset types are currently registered. Click "New Type" to create your first type.'
-            }
-            primaryActionLabel={
-              searchQuery
-                ? isRtl
-                  ? 'مسح البحث'
-                  : 'Clear Search'
-                : isRtl
-                ? 'إضافة نوع'
-                : 'New Type'
-            }
-            onPrimaryAction={
-              searchQuery ? () => setSearchQuery('') : handleOpenCreateModal
-            }
-          />
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left rtl:text-right border-collapse">
-                <thead>
-                  <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'رمز النوع' : 'Type ID'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'اسم النوع' : 'Type Name'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'التصنيف' : 'Category'}
-                    </th>
-                    <th className="py-3 px-4">{isRtl ? 'الوصف' : 'Description'}</th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'تاريخ الإنشاء' : 'Created Date'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'الحالة' : 'Status'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
-                      {isRtl ? 'الإجراءات' : 'Actions'}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-awn-border text-sm">
-                  {typesData.items.map((assetType) => {
-                    const isActive = assetType.status === 'Active';
-                    return (
-                      <tr
-                        key={assetType.typeId}
-                        className="hover:bg-awn-surface-alt transition-colors group"
-                      >
-                        {/* Type ID */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenTypeDetails(assetType)}
-                            className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
-                          >
-                            {assetType.typeId}
-                          </button>
-                        </td>
-
-                        {/* Type Name */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenTypeDetails(assetType)}
-                            className="font-medium text-awn-text-primary hover:text-awn-primary text-left transition-colors cursor-pointer"
-                          >
-                            {assetType.typeName}
-                          </button>
-                        </td>
-
-                        {/* Category */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-awn-surface-alt border border-awn-border text-awn-text-primary">
-                            {assetType.category}
-                          </span>
-                        </td>
-
-                        {/* Description */}
-                        <td className="py-3.5 px-4 align-middle text-xs text-awn-text-secondary max-w-md">
-                          {assetType.description || '—'}
-                        </td>
-
-                        {/* Created Date */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap font-mono text-xs text-awn-text-secondary tabular-nums">
-                          {assetType.createdDate}
-                        </td>
-
-                        {/* Status */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <StatusBadge
-                            label={assetType.status}
-                            tone={assetType.statusTone}
-                          />
-                        </td>
-
-                        {/* Row Actions */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right">
-                          <div className="inline-flex items-center justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenTypeDetails(assetType)}
-                              title={`View ${assetType.typeName}`}
-                              aria-label={`View ${assetType.typeName}`}
-                              className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditModal(assetType)}
-                              title={`Edit ${assetType.typeName}`}
-                              aria-label={`Edit ${assetType.typeName}`}
-                              className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            {isActive && (
-                              <button
-                                type="button"
-                                onClick={() => setDeactivateTarget(assetType)}
-                                title={`Deactivate ${assetType.typeName}`}
-                                aria-label={`Deactivate ${assetType.typeName}`}
-                                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-warning hover:bg-awn-warning-soft transition-colors cursor-pointer"
-                              >
-                                <Ban className="w-4 h-4" />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setDeleteTarget(assetType)}
-                              title={`Delete ${assetType.typeName}`}
-                              aria-label={`Delete ${assetType.typeName}`}
-                              className="p-1.5 rounded text-awn-text-secondary hover:text-awn-error hover:bg-awn-error-soft transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination Footer */}
-            <div className="px-4 py-3 border-t border-awn-border bg-awn-surface flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-awn-text-secondary">
-              <div className="tabular-nums">
-                {isRtl ? (
-                  <>
-                    عرض{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {formatNumber(typesData.items.length)}
-                    </strong>{' '}
-                    من أصل{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {formatNumber(typesData.pagination.totalItems)}
-                    </strong>{' '}
-                    سجل
-                  </>
-                ) : (
-                  <>
-                    Showing{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {typesData.items.length}
-                    </strong>{' '}
-                    of{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {typesData.pagination.totalItems}
-                    </strong>{' '}
-                    displayed records ·{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {typesData.summaryTotalLabel}
-                    </strong>
-                  </>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage <= 1}
-                  onClick={() => fetchTypes(currentPage - 1)}
-                  leftIcon={isRtl ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
-                >
-                  {isRtl ? 'السابق' : 'Previous'}
-                </Button>
-                <span className="px-2.5 py-1 font-mono text-xs text-awn-text-primary tabular-nums">
-                  {isRtl
-                    ? `صفحة ${formatNumber(currentPage)} من ${formatNumber(typesData.pagination.totalPages)}`
-                    : `Page ${currentPage} of ${typesData.pagination.totalPages}`}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= typesData.pagination.totalPages}
-                  onClick={() => fetchTypes(currentPage + 1)}
-                  rightIcon={isRtl ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                >
-                  {isRtl ? 'التالي' : 'Next'}
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      {/* Main Asset Types Table */}
+      <DataTable
+        title={isRtl ? 'أنواع الأصول' : 'Asset Types'}
+        columns={columns}
+        data={typesData.items}
+        count={typesData.pagination.totalItems}
+        loading={loading}
+        pageIndex={currentPage - 1}
+        pageSize={pageSize}
+        onPageChange={(newPageIndex) => {
+          const next = newPageIndex + 1;
+          setCurrentPage(next);
+          fetchTypes(next);
+        }}
+        searchValue={searchQuery}
+        onSearchChange={(value) => {
+          setSearchQuery(value);
+          setCurrentPage(1);
+        }}
+        searchPlaceholder={
+          isRtl
+            ? 'البحث برمز النوع، الاسم، التصنيف، الوصف...'
+            : 'Search by Type ID, Type Name, Category, Description...'
+        }
+        onAddNew={handleOpenCreateModal}
+        onExport={handleExportCsv}
+      />
 
       {/* ========================================================================
           TYPE DETAILS DRAWER (Section 6)

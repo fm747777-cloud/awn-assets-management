@@ -28,6 +28,8 @@ import { StatusBadge } from '../components/ui/StatusBadge.tsx';
 import { ConfirmDialog, Modal } from '../components/ui/Modal.tsx';
 import { EmptyState } from '../components/ui/EmptyState.tsx';
 import { TableSkeleton } from '../components/ui/LoadingState.tsx';
+import { DataTable, dataTableFeatures } from '../components/table/DataTable.tsx';
+import type { ColumnDef } from '@tanstack/react-table';
 import type {
   AssetDocument,
   ComplianceAsset,
@@ -437,6 +439,12 @@ export default function ComplianceAssetsPage({
   const [loadingList, setLoadingList] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [pageIndex, setPageIndex] = useState(0);
+  const pageSize = 8;
+
+  const paginatedComplianceList = useMemo(() => {
+    return complianceList.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
+  }, [complianceList, pageIndex, pageSize]);
 
   // Step 1: Choose Documents State
   // Default Selected Documents includes "Operations Card" ('Operations Card Info') as specified
@@ -2528,19 +2536,24 @@ export default function ComplianceAssetsPage({
       />
 
       {/* Compliance Assets Table */}
-      <div className="bg-awn-surface border border-awn-border rounded-lg overflow-hidden">
-        <div className="p-4 border-b border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="w-full sm:w-80">
-            <Input
-              placeholder={t('complianceAssets.searchPlaceholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onClear={() => setSearchQuery('')}
-              leftIcon={<Search className="w-4 h-4" />}
-              aria-label={t('complianceAssets.searchAria')}
-            />
-          </div>
-
+      <DataTable
+        title={t('complianceAssets.title')}
+        columns={complianceColumns}
+        data={paginatedComplianceList}
+        count={complianceList.length}
+        loading={loadingList}
+        pageIndex={pageIndex}
+        pageSize={pageSize}
+        onPageChange={setPageIndex}
+        searchValue={searchQuery}
+        onSearchChange={(val) => {
+          setSearchQuery(val);
+          setPageIndex(0);
+        }}
+        searchPlaceholder={t('complianceAssets.searchPlaceholder')}
+        onAddNew={handleStartNewComplianceAsset}
+        addNewLabel={t('complianceAssets.newComplianceAsset')}
+        toolbarSlot={
           <div
             role="group"
             aria-label="Filter compliance assets by status"
@@ -2552,7 +2565,10 @@ export default function ComplianceAssetsPage({
                 <button
                   key={st}
                   type="button"
-                  onClick={() => setStatusFilter(st)}
+                  onClick={() => {
+                    setStatusFilter(st);
+                    setPageIndex(0);
+                  }}
                   className={`px-2.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer ${
                     active
                       ? 'bg-awn-surface text-awn-primary font-semibold border border-awn-border'
@@ -2564,126 +2580,8 @@ export default function ComplianceAssetsPage({
               );
             })}
           </div>
-        </div>
-
-        {loadingList ? (
-          <TableSkeleton rows={4} columns={6} />
-        ) : complianceList.length === 0 ? (
-          <EmptyState
-            title={t('complianceAssets.noAssetsFound')}
-            description={t('complianceAssets.noAssetsDesc')}
-            primaryActionLabel={t('complianceAssets.newComplianceAsset')}
-            onPrimaryAction={handleStartNewComplianceAsset}
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left rtl:text-right border-collapse">
-              <thead>
-                <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                  <th className="py-3 px-4 whitespace-nowrap">
-                    {t('complianceAssets.colAssetId')}
-                  </th>
-                  <th className="py-3 px-4">
-                    {t('complianceAssets.colVehicleAssetPlate')}
-                  </th>
-                  <th className="py-3 px-4 whitespace-nowrap">
-                    {t('complianceAssets.colCustomerBusiness')}
-                  </th>
-                  <th className="py-3 px-4 whitespace-nowrap">
-                    {t('complianceAssets.colAssignedDriver')}
-                  </th>
-                  <th className="py-3 px-4 whitespace-nowrap">
-                    {t('complianceAssets.colStatus')}
-                  </th>
-                  <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
-                    {t('complianceAssets.colActions')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-awn-border text-sm">
-                {complianceList.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-awn-surface-alt transition-colors"
-                  >
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenAssetDetails(item)}
-                        className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
-                      >
-                        {item.code}
-                      </button>
-                      <div className="text-[11px] text-awn-text-muted mt-0.5">
-                        {t('complianceAssets.docsLinked', {
-                          count: formatNumber(item.selectedDocuments?.length || 0),
-                        })}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 align-middle">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenAssetDetails(item)}
-                        className="font-medium text-awn-text-primary hover:text-awn-primary text-left rtl:text-right cursor-pointer"
-                      >
-                        {item.registrationDetails?.brand ||
-                          item.basicDetails?.assetsType ||
-                          'Compliance Asset'}
-                      </button>
-                      <div className="text-xs text-awn-text-muted mt-0.5 font-mono tabular-nums">
-                        {item.vehicleInfo?.plateNumberEn || t('complianceAssets.noPlate')} ·{' '}
-                        {item.vehicleInfo?.plateNumberAr || '—'} · VIN:{' '}
-                        {item.vehicleInfo?.vinNumber || '—'}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                      <div className="text-xs font-medium text-awn-text-primary">
-                        {item.basicDetails?.customer || '—'}
-                      </div>
-                      <div className="text-xs text-awn-text-secondary mt-0.5">
-                        {item.basicDetails?.business || '—'}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                      <div className="text-xs font-medium text-awn-text-primary">
-                        {item.driverInfo?.driverName || t('complianceAssets.unassigned')}
-                      </div>
-                      <div className="text-xs text-awn-text-muted font-mono tabular-nums mt-0.5">
-                        ID: {item.driverInfo?.driverId || '—'}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                      <StatusBadge label={item.status} tone={item.statusTone} />
-                    </td>
-                    <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right rtl:text-left">
-                      <div className="inline-flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          leftIcon={<Eye className="w-3.5 h-3.5" />}
-                          onClick={() => handleOpenAssetDetails(item)}
-                        >
-                          {t('complianceAssets.assetDetails')}
-                        </Button>
-                        <Button
-                          variant={item.status === 'Draft' ? 'gold' : 'outline'}
-                          size="sm"
-                          leftIcon={<Pencil className="w-3.5 h-3.5" />}
-                          onClick={() => handleEditExistingAsset(item)}
-                        >
-                          {item.status === 'Draft'
-                            ? t('complianceAssets.continueDraft')
-                            : t('complianceAssets.edit')}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        }
+      />
     </div>
   );
 }

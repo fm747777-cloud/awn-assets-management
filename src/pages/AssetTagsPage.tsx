@@ -1,13 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Ban,
-  ChevronLeft,
-  ChevronRight,
   Download,
   Eye,
   Pencil,
   Plus,
-  Search,
   Tag,
   Trash2,
 } from 'lucide-react';
@@ -21,8 +18,8 @@ import { StatusBadge } from '../components/ui/StatusBadge.tsx';
 import { Drawer } from '../components/ui/Drawer.tsx';
 import { ConfirmDialog, Modal } from '../components/ui/Modal.tsx';
 import { FormSection } from '../components/ui/FormSection.tsx';
-import { EmptyState } from '../components/ui/EmptyState.tsx';
-import { TableSkeleton } from '../components/ui/LoadingState.tsx';
+import { DataTable, dataTableFeatures } from '../components/table/DataTable.tsx';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useLanguage } from '../hooks/useLanguage.tsx';
 import type {
   AssetTag,
@@ -278,6 +275,122 @@ export default function AssetTagsPage() {
     });
   };
 
+  const columns = useMemo<ColumnDef<typeof dataTableFeatures, AssetTag>[]>(
+    () => [
+      {
+        id: 'tagId',
+        accessorKey: 'tagId',
+        header: () => (isRtl ? 'رمز الوسم' : 'Tag ID'),
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={() => handleOpenTagDetails(row.original)}
+            className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
+          >
+            {row.original.tagId}
+          </button>
+        ),
+      },
+      {
+        id: 'tagName',
+        accessorKey: 'tagName',
+        header: () => (isRtl ? 'اسم الوسم' : 'Tag Name'),
+        cell: ({ row }) => (
+          <button
+            type="button"
+            onClick={() => handleOpenTagDetails(row.original)}
+            className="font-medium text-awn-text-primary hover:text-awn-primary text-left rtl:text-right transition-colors cursor-pointer"
+          >
+            {row.original.tagName}
+          </button>
+        ),
+      },
+      {
+        id: 'description',
+        accessorKey: 'description',
+        header: () => (isRtl ? 'الوصف' : 'Description'),
+        cell: ({ row }) => (
+          <span className="text-xs text-awn-text-secondary max-w-md truncate block">
+            {row.original.description || '—'}
+          </span>
+        ),
+      },
+      {
+        id: 'createdDate',
+        accessorKey: 'createdDate',
+        header: () => (isRtl ? 'تاريخ الإنشاء' : 'Created Date'),
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-awn-text-secondary tabular-nums">
+            {row.original.createdDate}
+          </span>
+        ),
+      },
+      {
+        id: 'status',
+        accessorKey: 'status',
+        header: () => (isRtl ? 'الحالة' : 'Status'),
+        cell: ({ row }) => (
+          <StatusBadge label={row.original.status} tone={row.original.statusTone} />
+        ),
+      },
+      {
+        id: 'actions',
+        header: () => (
+          <span className="block text-right rtl:text-left">
+            {isRtl ? 'الإجراءات' : 'Actions'}
+          </span>
+        ),
+        cell: ({ row }) => {
+          const assetTag = row.original;
+          const isActive = assetTag.status === 'Active';
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <button
+                type="button"
+                onClick={() => handleOpenTagDetails(assetTag)}
+                title={`View ${assetTag.tagName}`}
+                aria-label={`View ${assetTag.tagName}`}
+                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
+              >
+                <Eye className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOpenEditModal(assetTag)}
+                title={`Edit ${assetTag.tagName}`}
+                aria-label={`Edit ${assetTag.tagName}`}
+                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              {isActive && (
+                <button
+                  type="button"
+                  onClick={() => setDeactivateTarget(assetTag)}
+                  title={`Deactivate ${assetTag.tagName}`}
+                  aria-label={`Deactivate ${assetTag.tagName}`}
+                  className="p-1.5 rounded text-awn-text-secondary hover:text-awn-warning hover:bg-awn-warning-soft transition-colors cursor-pointer"
+                >
+                  <Ban className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(assetTag)}
+                title={`Delete ${assetTag.tagName}`}
+                aria-label={`Delete ${assetTag.tagName}`}
+                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-error hover:bg-awn-error-soft transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        },
+      },
+    ],
+    [isRtl]
+  );
+
   return (
     <div className="space-y-5">
       {/* Page Header with exact Title, Description, and Actions ("Export CSV", "New Tag") */}
@@ -336,246 +449,33 @@ export default function AssetTagsPage() {
         }
       />
 
-      {/* Main Asset Tags Table Container */}
-      <div className="bg-awn-surface border border-awn-border rounded-lg overflow-hidden">
-        {/* Search & Summary Toolbar */}
-        <div className="p-4 border-b border-awn-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="w-full sm:w-80">
-            <Input
-              placeholder={
-                isRtl
-                  ? 'البحث برمز الوسم، الاسم، الوصف...'
-                  : 'Search by Tag ID, Tag Name, Description...'
-              }
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onClear={() => setSearchQuery('')}
-              leftIcon={<Search className="w-4 h-4" />}
-              aria-label={isRtl ? 'بحث في وسوم الأصول' : 'Search asset tags'}
-            />
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-awn-text-secondary">
-            <span className="px-2.5 py-1 rounded-md bg-awn-surface-alt border border-awn-border font-semibold text-awn-text-primary tabular-nums">
-              {isRtl
-                ? `${formatNumber(tagsData.totalRecordsCount)} وسم أصل`
-                : tagsData.summaryTotalLabel}
-            </span>
-          </div>
-        </div>
-
-        {/* Table Content */}
-        {loading ? (
-          <TableSkeleton rows={5} columns={6} />
-        ) : tagsData.items.length === 0 ? (
-          <EmptyState
-            title={isRtl ? 'لم يتم العثور على وسوم' : 'No Asset Tags Found'}
-            description={
-              searchQuery
-                ? isRtl
-                  ? `لا توجد وسوم تطابق "${searchQuery}". جرب إفراغ خانة البحث.`
-                  : `No asset tags matched "${searchQuery}". Try clearing your search query.`
-                : isRtl
-                ? 'لا توجد وسوم أصول مسجلة حالياً. انقر على "إضافة وسم" للبدء.'
-                : 'No asset tags are currently registered. Click "New Tag" to create your first tag.'
-            }
-            primaryActionLabel={
-              searchQuery
-                ? isRtl
-                  ? 'مسح البحث'
-                  : 'Clear Search'
-                : isRtl
-                ? 'إضافة وسم'
-                : 'New Tag'
-            }
-            onPrimaryAction={
-              searchQuery ? () => setSearchQuery('') : handleOpenCreateModal
-            }
-          />
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left rtl:text-right border-collapse">
-                <thead>
-                  <tr className="bg-awn-surface-alt border-b border-awn-border text-xs font-semibold text-awn-text-secondary">
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'رمز الوسم' : 'Tag ID'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'اسم الوسم' : 'Tag Name'}
-                    </th>
-                    <th className="py-3 px-4">{isRtl ? 'الوصف' : 'Description'}</th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'تاريخ الإنشاء' : 'Created Date'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap">
-                      {isRtl ? 'الحالة' : 'Status'}
-                    </th>
-                    <th className="py-3 px-4 whitespace-nowrap text-right rtl:text-left">
-                      {isRtl ? 'الإجراءات' : 'Actions'}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-awn-border text-sm">
-                  {tagsData.items.map((assetTag) => {
-                    const isActive = assetTag.status === 'Active';
-                    return (
-                      <tr
-                        key={assetTag.tagId}
-                        className="hover:bg-awn-surface-alt transition-colors group"
-                      >
-                        {/* Tag ID */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenTagDetails(assetTag)}
-                            className="font-mono text-xs font-semibold text-awn-primary hover:underline tabular-nums cursor-pointer"
-                          >
-                            {assetTag.tagId}
-                          </button>
-                        </td>
-
-                        {/* Tag Name */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenTagDetails(assetTag)}
-                            className="font-medium text-awn-text-primary hover:text-awn-primary text-left transition-colors cursor-pointer"
-                          >
-                            {assetTag.tagName}
-                          </button>
-                        </td>
-
-                        {/* Description */}
-                        <td className="py-3.5 px-4 align-middle text-xs text-awn-text-secondary max-w-md">
-                          {assetTag.description || '—'}
-                        </td>
-
-                        {/* Created Date */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap font-mono text-xs text-awn-text-secondary tabular-nums">
-                          {assetTag.createdDate}
-                        </td>
-
-                        {/* Status */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap">
-                          <StatusBadge
-                            label={assetTag.status}
-                            tone={assetTag.statusTone}
-                          />
-                        </td>
-
-                        {/* Row Actions */}
-                        <td className="py-3.5 px-4 align-middle whitespace-nowrap text-right">
-                          <div className="inline-flex items-center justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenTagDetails(assetTag)}
-                              title={`View ${assetTag.tagName}`}
-                              aria-label={`View ${assetTag.tagName}`}
-                              className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditModal(assetTag)}
-                              title={`Edit ${assetTag.tagName}`}
-                              aria-label={`Edit ${assetTag.tagName}`}
-                              className="p-1.5 rounded text-awn-text-secondary hover:text-awn-primary hover:bg-awn-primary-soft transition-colors cursor-pointer"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            {isActive && (
-                              <button
-                                type="button"
-                                onClick={() => setDeactivateTarget(assetTag)}
-                                title={`Deactivate ${assetTag.tagName}`}
-                                aria-label={`Deactivate ${assetTag.tagName}`}
-                                className="p-1.5 rounded text-awn-text-secondary hover:text-awn-warning hover:bg-awn-warning-soft transition-colors cursor-pointer"
-                              >
-                                <Ban className="w-4 h-4" />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setDeleteTarget(assetTag)}
-                              title={`Delete ${assetTag.tagName}`}
-                              aria-label={`Delete ${assetTag.tagName}`}
-                              className="p-1.5 rounded text-awn-text-secondary hover:text-awn-error hover:bg-awn-error-soft transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination Footer */}
-            <div className="px-4 py-3 border-t border-awn-border bg-awn-surface flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-awn-text-secondary">
-              <div className="tabular-nums">
-                {isRtl ? (
-                  <>
-                    عرض{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {formatNumber(tagsData.items.length)}
-                    </strong>{' '}
-                    من أصل{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {formatNumber(tagsData.pagination.totalItems)}
-                    </strong>{' '}
-                    سجل
-                  </>
-                ) : (
-                  <>
-                    Showing{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {tagsData.items.length}
-                    </strong>{' '}
-                    of{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {tagsData.pagination.totalItems}
-                    </strong>{' '}
-                    displayed records ·{' '}
-                    <strong className="font-semibold text-awn-text-primary">
-                      {tagsData.summaryTotalLabel}
-                    </strong>
-                  </>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage <= 1}
-                  onClick={() => fetchTags(currentPage - 1)}
-                  leftIcon={isRtl ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
-                >
-                  {isRtl ? 'السابق' : 'Previous'}
-                </Button>
-                <span className="px-2.5 py-1 font-mono text-xs text-awn-text-primary tabular-nums">
-                  {isRtl
-                    ? `صفحة ${formatNumber(currentPage)} من ${formatNumber(tagsData.pagination.totalPages)}`
-                    : `Page ${currentPage} of ${tagsData.pagination.totalPages}`}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage >= tagsData.pagination.totalPages}
-                  onClick={() => fetchTags(currentPage + 1)}
-                  rightIcon={isRtl ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                >
-                  {isRtl ? 'التالي' : 'Next'}
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      {/* Main Asset Tags Table */}
+      <DataTable
+        title={isRtl ? 'وسوم الأصول' : 'Asset Tags'}
+        columns={columns}
+        data={tagsData.items}
+        count={tagsData.pagination.totalItems}
+        loading={loading}
+        pageIndex={currentPage - 1}
+        pageSize={pageSize}
+        onPageChange={(newPageIndex) => {
+          const next = newPageIndex + 1;
+          setCurrentPage(next);
+          fetchTags(next);
+        }}
+        searchValue={searchQuery}
+        onSearchChange={(value) => {
+          setSearchQuery(value);
+          setCurrentPage(1);
+        }}
+        searchPlaceholder={
+          isRtl
+            ? 'البحث برمز الوسم، الاسم، الوصف...'
+            : 'Search by Tag ID, Tag Name, Description...'
+        }
+        onAddNew={handleOpenCreateModal}
+        onExport={handleExportCsv}
+      />
 
       {/* ========================================================================
           TAG DETAILS DRAWER (Section 8)
